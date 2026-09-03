@@ -117,92 +117,66 @@ To correctly assess a model evaluation and prevent cherry-picking, we proceed to
 
 ## Models
 
-In this context, models are [deep neural network models](https://en.wikipedia.org/wiki/Neural_network_(machine_learning)). Neural Networks consist of connected nodes _(neurons)_ that receive signals from other neurons, process the signal, and send the output to other neurons. Neurons are grouped into layers, and signals travel from the first layer to the last one transforming the input signal into an output signal. A neural network is considered deep if it has more than 2 layers. Each neuron contains information called **weights** and **biases**. 
+The models used in this tutorial are neural networks. Their behaviour is entirely determined by a large set of adjustable quantities called **parameters** — also referred to as **weights** and **biases** — and **training** a model means adjusting these quantities until it produces the output you expect. For the purposes of this tutorial, this is all you need to know about their internals.
 
-To be usable, Neural Networks must be trained on a certain task, for instance a classification task. As described before, the algorithm/neural network will adapt to the training data. In this case, the adaptation consists of updating the **weights** and **biases** in each neuron in order for the neural network to perform the task. 
+:::{.callout-note collapse="true" title="Learn more about neural networks"}
 
-Ultimately, they can be seen as a long sequence of simple transformations, each transformation being conditioned by the **weights** and **biases**, to perform a certain task.
+- [3Blue1Brown, *Neural networks*](https://www.youtube.com/playlist?list=PLZHQObOWTQDNU6R1_67000Dx_ZCJB-3pi): a visual, intuition-first video series. A good entry point if you have no prior exposure to the topic.
+- [Michael Nielsen, *Neural Networks and Deep Learning*](http://neuralnetworksanddeeplearning.com/): a free online book, self-contained and readable without an advanced mathematical background.
+- [Jurafsky & Martin, chapter 7: *Neural Networks*](https://web.stanford.edu/~jurafsky/slp3/7.pdf): the reference NLP textbook we cite throughout this tutorial, for readers who want the formal treatment.
 
-```{mermaid}
-graph LR
+:::
 
-N0((Neuron))
-subgraph prevLayer["Previous Layer"]
-  direction TB
-  NP1((Neuron))
-  NP2((Neuron))
-  NP3((Neuron))
-end
+## Encoders vs. decoders — why not just use ChatGPT?{#sec-encoders}
 
-subgraph nextLayer["Next Layer"]
-  direction TB
-  NN1((Neuron))
-  NN2((Neuron))
-  NN3((Neuron))
-end
+Modern language models[^transformer] fall into two families, which differ in what they produce:
 
-NP1 --> N0
-NP2 --> N0
-NP3 --> N0
+- **Decoder models** — GPT, Llama, Claude, the models behind ChatGPT and similar tools — produce text, and are the right tool for open-ended tasks: conversation, drafting, summarising, translating. They're very large, rarely runnable on a personal computer, and typically used through an API, as in the [previous tutorial](https://www.css.cnrs.fr/classification-with-generative-llms-and-api-calls/).
+- **Encoder models** — BERT and its relatives — produce no text, but an **embedding**: a numerical representation of a text's meaning. This makes them the right tool for tasks with a closed, well-defined output, such as classification, similarity ranking, or clustering. They're much smaller, and will most likely run on your own machine[^7].
 
-N0 --> NN1
-N0 --> NN2
-N0 --> NN3
-```
-
-## Language Models
-
-Language models encompasses a large family of neural network models with infinite architecture variations. Their goal is to perform a text related tasks like generating a summary, or in our case, classifying text inputs.
-
-Across all architechures, the **Transformer architecture** has become the _de facto_ standard for contemporary artificial intelligence. It was introduced in 2017 by a team from Google, in perhaps the most influential paper in contemporary NLP and beyond, (["Attention is all you need"](https://en.wikipedia.org/wiki/Attention_Is_All_You_Need)). The cornerstone of this architecture is *self-attention*, which is an efficient way of taking into account the context in which a word is used.
-
-## Language Models of type Encoder{#sec-encoders}
-
-The original transformer was made up of two parts, the encoder and the decoder, but most of its subsequent applications use only one of these parts:
-
-- **Decoder** models, including the GPT and Llama families, are generative models, meaning they are able to produce text. They are typically very large (from $10^6$ to $10^9$ weights), it is unlikely to run one on a personal computer and are often used through an API as demonstrated in the [previous tutorial](XXX).
-- **Encoder** models are intended to capture the semantic properties of their input text, which can then be used for downstream tasks. The output of an encoder model is a vector of several hundreds of dimensions called an **embedding**. They are much more frugal ($10^6$ - $10^8$ weights), it is likely that you can run one on a personal computer[^7]. 
-
-@sec-pros-cons, lists a number of pros and cons for both decoder and encoder models when used for classification.
+[^transformer]: Most are built on the **Transformer** architecture, introduced by Google in 2017 — the same word behind the `transformers` Python library you'll use throughout this tutorial.
 
 [^7]: It tends to be less likely as newer models tend to be larger. Read more in the [Choose and load a model](#choose-and-load-a-model) section.
 
-![Transformer architecture](./assets/encoder-architecture.jpg){#fig-transformer-architecture width=50%}
+Both families can annotate a corpus, but they learn your categories differently:
 
-In general, encoder models (AM: or maybe embedding models ? JB what's the difference?) are trained to **model the semantic of words in given context**. A well designed encoder model can tell if two words are close in meaning or not using a "semantic distance" metric. In most NLP applications, the metric used is the cosinus distance, also referred to as the "similarity score".
+- A decoder has to be instructed every time, via a prompt — you're relying on it interpreting your instructions correctly.
+- An encoder is **fine-tuned** on a few hundred texts you label yourself — it learns from your judgment calls, not a description of them.
+
+That upfront annotation effort — and a resulting model that only does this one task — is the price of an encoder, in exchange for a model you fully control. This has concrete consequences for cost, confidentiality and reproducibility, covered next.
+
+### Pros and cons for social science research{#sec-pros-cons}
+
+- **Coding skills**: fine-tuning requires more code than an API call — a chance to build skills, at the cost of time. [ActiveTigger](css.cnrs.fr/active-tigger) offers a code-free alternative for collaborative annotation and fine-tuning.
+
+<!--TODO add logo-->
+
+- **Hardware and cost**: fine-tuning needs a machine to run on; API calls need a paid key. Neither is equally accessible to everyone.
+- **Control and reproducibility**: most providers disclose neither the data their models were trained on nor future changes to them, which limits interpretability. Since you own the encoder and its fine-tuning data, your results stay reproducible and easier to interpret (XXX additional techniques to probe the model???).
+- **Open weights**: most generative models are "closed weights" — usable only through an API — while HuggingFace models, encoder or generative, are "open weights" and downloadable, which matters for reproducibility (source with varying performance through after different model updates).
+- **Confidentiality**: sensitive corpora cannot go through an external API; you would need to run any model, generative or encoder, on a trusted server. An encoder's lighter hardware needs make that bar easier to clear.
+
+The rest of this tutorial deals with encoder models only (AM: or maybe embedding models ? JB what's the difference?): texts close in meaning are given close embeddings, a proximity measured by the "similarity score" (usually the cosine distance).
 
 ![Similarity](./assets/similarity.png){#fig-similarity width=100%}
 
-For instance in @fig-similarity, the word "apple" and "pear" are very close in meaning, so their similarity score is very high. However, in the context of Apple's new product, the embedding has shifted with the context, now the similarity score is lower.
+In @fig-similarity, "apple" and "pear" score high in similarity — but in the context of Apple's new product, "apple"'s embedding shifts and the score drops. Classification works the same way: for a "left/right" label, the embeddings should capture what sets left-wing texts apart from right-wing ones.
 
-In the context of classification using an encoder model, the goal is to use the output of the language model, the embeddings, as predictors for the label. If the classification is "left/right", the embedding should capture the semantic similarities between left-wing texts and right-wing texts in order to classify them.
-
-One key parameter of all models is the "maximum context window". The maximum context window is the maximum[^max-window-size-actually] number of tokens[^tokens-def] that can be digested by the model at once, anything exceeding this window is simply ignored. First models used to have very short context windows (between 128 and 512 tokens maximum), meaning long texts had to be split into sentences or paragraphs. This may be a problem depending on the task at hand.
+One last practical property: the **maximum context window**, the maximum[^max-window-size-actually] number of tokens[^tokens-def] a model can process at once — anything beyond is simply ignored. Older models had short windows (128 to 512 tokens), so long texts had to be split into sentences or paragraphs.
 
 [^max-window-size-actually]: Some techniques allow users to exceed the maximum context window, please refer to XXX @ Léo @ Alexandre
 
 [^tokens-def]: Texts cannot be used directly and must undergo a tokenization process. Models come with a vocabulary of tokens, each text is therefore a combination of "tokens" from the vocabulary. [Read more](https://web.stanford.edu/~jurafsky/slp3/2.pdf)
 
-## BERT models
+BERT was released by Google in 2019; CamemBERT (French), RoBERTa and ModernBERT are later variants built on it. In this tutorial we'll use `bert-base-uncased`.
 
-The first BERT model was published by Google in 2019 (Devlin et al., 2019). "BERT" refers to a specific arrangement of Transformers layers with some tweaks that demonstrated great overall performance at the time and has become a reference in the realm of encoder models. As a consequence, many other BERT-like models were published, working off of these foundations, each new model proposing modifications or improvements like ModernBERT greatly increasing the context window size, CamemBERT trained on French texts or RoBERTa changing the training tasks. 
+## Pretrained Models and Fine-tuning
 
-## Pretrained Language Model
+**Pretrained** means the heavy work has already been done for you: specialised organisations with the required hardware and data have already trained these models to recognise language patterns, a process that can take from days to months (XXX source), and published the resulting weights on HuggingFace for you to download.
 
-We mentioned that language models were deep neural networks trained on a natural language task, but a model is not usable before it was trained to recognise language patterns and semantic. "Pretrained" refers to the training process that makes a language model _understand_ texts by training it to perform some tasks. In practice, the weights and biases are updated to optimize one or more tasks, just as any neural network. For instance, BERT is trained on two tasks : 
+Fine-tuning, by contrast, is quick: a few minutes, at most a few dozen on more limited hardware. It only nudges the weights and biases, by a much smaller amount than pretraining, turning the general-purpose model into a classifier for your own labels — one assessed with the same metrics (F1 score, ...) and the same train, dev, test framework as any other classifier.
 
-- Task 1: Masked LM. Take a sentence, replace some words by a `[MASK]` token, predict what was the word.
-- Task 2: Next Sentence Prediction. Take two sentences A and B, classify whether it makes sense for sentence B to appear after sentence A. 
-
-This pre-training is the most time and power consuming step, as the process can take from dozens of hours to several days, weeks, or even months (XXX source). This task is only performed by specialised organisations that have access to high-end hardware and large amounts of data (whether from legal or illegal sources). Once the process is done, the model can reach moderate to high performance on a large range of tasks.
-
-## Fine-tuning
-
-The "pre-training" implies there is a "training", or more specifically, a "fine-tuning". This fine-tuning process only takes a few minutes and can last a few dozens of minutes on more limited hardware. This process intends to adapt the model to **your** task and **your** data, going from moderate to, hopefully, very high performance. 
-
-In our case, we will be fine-tuning the model on a classification task, by providing text inputs and hand labels. In practice, this process updates the weights and biases but at a much lower order of magnitude. This fine-tuning process will transform the language model into a classifier model for text data. This means that the fine tuning is assessed using the same metrics (F1 score, ...) and following the same framework (train, dev, test splits) as any other classifier. 
-
-:::{.callout-note  collapse="true" title="Learn more the embedding space and training encoders"}
+:::{.callout-note  collapse="true" title="Learn more about the Transformer architecture, the embedding space and training encoders"}
 
 - [The illustrated transformer](https://jalammar.github.io/illustrated-transformer/)
 - [What are Transformer Neural Networks](https://www.youtube.com/watch?v=XSSTuhyAmnI)
@@ -220,7 +194,7 @@ In this section we will see the fundamentals to fine-tuning encoders for a class
 The implementation follows a standard framework including the following steps:
 
 - Load, clean and split your data: clean your texts off of noise and unwanted information and split your dataset into three subsets as described in @sec-classification-task.
-- Choose a model from HuggingFace and load it on your machine.
+- Choose a model from HuggingFace and load it on a personal computer.
 - Finetune the model using the standard implementation
 - Assess the model performance and update the hyperparameters 
 - Predict the labels of all items using the fine-tuned model
@@ -881,26 +855,48 @@ You now have all the technical knowledge necessary to fine-tune most classificat
 
 # Training pipeline: advanced practices{#sec-advanced}
 
-## Hyperparameters description
+## What the hyperparameters are for{#sec-hyperparameters-description}
 
-In @sec-training-parameters we introduced the main hyperparameters but did not provide much information on what they represent. In this section, we provide list these parameters and propose a description as well as a level of importance when tweaking the hyperparameters.
+In @sec-training-parameters we set a number of hyperparameters without saying much about them. Rather than describing each one in isolation, we present them here through the problems they are meant to solve, because this is how you will encounter them in practice: you run a fine-tuning, you observe that something went wrong, and you change the hyperparameter that addresses it.
 
-- **Learning rate** 🟢🟢🟢 _(importance)_
-  - The learning rate represents the weights update rate at each step. More specifically, this hyperparameter represents the first learning rate value, as the learning rate itself changes during the process. Values too high might change the weights too much and mess with the model's inner balance; on the other hand values too low will not affect the model and the fine-tuning will have no effect.
-  - Typical values: $[1e-6, 1e-4]$
-- **Number of epochs** 🟢
-  - This is the number of times the number model will see the full training set. You want it as low as possible[^number-of-epochs] but sufficient for the performance to peak.
-  - Typical values: 3-5
-- **Weight decay**[^alias-weight-decay] 🟢🟢
-  - This prevents weights from growing too big (i.e. it's a regularisation parameter) and lead to overfitting. Values too low (meaning no regularisation) might result in overfitting whereas values too high may lead to underfitting.
-  - Typical values: 0.01-0.1  
-- **Batch size**, **Device batch size** and **Gradient accumulation steps** 🟢🟢
-  - All three parameters monitor the number of inputs to use in a batch before updating the weights. The larger the batch the less sensitive to noise the updates are. However, depending on your hardware, you might not be able to reach high batch sizes. Therefore we set the Device batch size at a lower value and Accumulation steps so that $\text{Batch size} = \text{Device batch size} \times \text{Gradient accumulation steps}$.
-  - Typical values for the Batch size: 16-64
-- **Eval** and **Save strategies** 🔴
-  - The strategies can be set to `"epoch"` or `"steps"`. If you use steps you can set the `eval_steps` and `save_steps` parameter to set after how many steps you want to evaluate your model and save it. Bear in mind that each model can weigh a few gigabytes, the more you save the more disk space you'll need. You can use `save_total_limit`[^note-save-total-limit] to limit the number of checkpoints saved.
+To follow this section, one mental image is enough. Fine-tuning proceeds by small successive corrections: the model reads a **batch** of annotated texts, compares its predictions with your annotations, and adjusts its parameters slightly in the direction that reduces the gap. It then moves on to the next batch, and repeats until it has gone through the entire training set — that is one **epoch**. The hyperparameters below govern *how many* texts the model reads before each correction, *how large* each correction is, and *how many times* the model goes through your data.
 
-[^number-of-epochs]: More epochs mean more computation time.
+**Problem 1: the model has learned nothing**
+
+At the end of the fine-tuning, the metrics are barely better than chance and the losses (@sec-hyperparameters-tuning) have hardly moved. The corrections applied to the model were either too small to have any effect, or too few.
+
+- The **learning rate** 🟢🟢🟢 _(importance)_ sets the size of each correction. It is by far the most consequential hyperparameter: set too low, the fine-tuning leaves the model essentially unchanged. Try increasing it. Typical values: $[1e-6, 1e-4]$.
+- The **number of epochs** 🟢 sets how many times the model goes through your training set. If performance was still improving when training stopped, the model simply did not get enough passes over your data. Typical values: 3-5, bearing in mind that each additional epoch costs computation time.
+
+**Problem 2: the model has learned your training set by heart**
+
+The model performs very well on the texts it was trained on, and noticeably worse on the dev set. It has memorised your training examples instead of learning the distinction you are after. This is called **overfitting**, and it is the most common failure in this kind of project, particularly when annotations are few.
+
+- The **weight decay**[^alias-weight-decay] 🟢🟢 discourages the model from adopting extreme parameter values, which is the mechanism through which memorisation usually happens. Increasing it constrains the model and pushes it towards more general solutions; setting it too high prevents it from learning at all. Typical values: 0.01-0.1.
+- Lowering the **learning rate** or the **number of epochs** works towards the same end: fewer and gentler corrections leave the model less opportunity to fit the specifics of your examples.
+- The most reliable remedy, however, is not a hyperparameter: annotate more data.
+
+**Problem 3: the fine-tuning is erratic**
+
+Performance jumps up and down from one evaluation to the next instead of improving steadily. The corrections are being computed on too little evidence at a time, so each one chases the peculiarities of a handful of texts rather than a general pattern.
+
+- The **batch size** 🟢🟢 is the number of texts the model reads before each correction. The larger the batch, the more each correction reflects a general tendency of your corpus rather than the noise of a few individual texts. Typical values: 16-64.
+- A learning rate set too high produces the same symptom for a different reason: each correction overshoots. If enlarging the batch is not enough, lower the learning rate.
+
+**Problem 4: the fine-tuning does not fit on your machine**
+
+Large batches are desirable, but the whole batch must be held in memory at once, and this is usually where a personal computer gives up (see @sec-GPU). The way around it is to accumulate several small batches before applying a correction, which is almost equivalent and requires far less memory:
+
+$$\text{Batch size} = \text{Device batch size} \times \text{Gradient accumulation steps}$$
+
+- The **device batch size** is what your hardware actually processes at once: lower it until the training fits in memory.
+- The **gradient accumulation steps** compensates, so that the effective batch size stays in the range you wanted.
+
+Disk space calls for the same kind of attention. The **eval** and **save strategies** 🔴 can be set to `"epoch"` or `"steps"`; with `"steps"`, the `eval_steps` and `save_steps` parameters control how often the model is evaluated and saved. Since each checkpoint can weigh several gigabytes, use `save_total_limit`[^note-save-total-limit] to cap the number of checkpoints kept on disk.
+
+:::{.callout-tip title="Where to start"}
+If you only change one hyperparameter, change the learning rate. A reasonable strategy is to keep everything else at the values used in @sec-training-parameters, try a few learning rates spanning the typical range (for instance 1e-5, 3e-5 and 5e-5), and compare the resulting learning curves. Only then is it worth tuning the weight decay and the batch size. Remember that these choices must be made by comparing performance on the **dev** set, never on the test set (@sec-classification-task).
+:::
 
 [^alias-weight-decay]: AKA: L2-regularization.
 
@@ -1265,35 +1261,7 @@ This is merely a convention issue. Some models/versions use beta/gamma keywords 
 
 @ Etienne @ Julien
 
-# Pros and cons of using an encoder vs decoder model for text classification{#sec-pros-cons}
-
-As mentionned in the introduction, one could choose to use an LLMs such as ChatGPT through an API ([illustrated here](https://www.css.cnrs.fr/classification-with-generative-llms-and-api-calls/)) or fine-tune an encoder model as illustrated in this tutorial. We list a number of pros and cons for using either technique in the context of social science research.
-
-**Coding skills**
-
-As this tutorial demonstrates, fine tuning an encoder model requires more coding skills than making API requests to an external servers. This can be an advantage if you want to develop your skills and refine your understanding of language models, but it takes more time and effort. 
-
-Alternatively, you can use [ActiveTigger](css.cnrs.fr/active-tigger), an open-source software designed to support collaborative text annotation and code-free model fine-tuning, and more! 
-
-<!--TODO add logo-->
-
-**Accessibility to a server**
-
-Fine tuning an encoder model requires hardware and a clean environment as demonstrated throughout this tutorial; on the other hand, making API calls requires an API key with credit. This raises concerns regarding the equal access to such technologies.
-
-**Control on the model**
-
-Most models do not disclose the training data used for pretraining the model we use, this represent a hard limit when it comes to controlling the model used and the interpretability of the results. However, encoder models allow for more reproducibility (you own the model used for inference) and interpretability (you own the data used for fine tuning, XXX additional techniques to probe the model???).
-
-**Open weights**
-
-Most generative models cannot be downloaded on your personal device, these models are said "closed weights". If you want to use such models you will need to use an API to use this specific model. On the other hand, all models on Hugging Face (generative or encoder) can be downloaded and are said "open weights". This is critical for reproducibility purposes. (source with varying performance through after different model updates).
-
-**Confidentiality**
-
-If your research project requires extensive care regarding confidentiality, then you cannot use an LLM through API calls. You would need to run a model (generative or encoder) on trusted servers/devices. Therefore, fine-tuning an encoder lowers the bar for hardware requirements.
-
-# Conclusion 
+# Conclusion
 
 In this tutorial we covered many topics:
 - In @sec-key-concepts we defined some key concepts such as the supervised learning framework, BERT models and fine-tuning. It is important to have a broad understanding of these in order to easily manipulate the objects and adapt the code.
