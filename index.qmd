@@ -129,32 +129,28 @@ The models used in this tutorial are neural networks. Their behaviour is entirel
 
 ## Encoders vs. decoders — why not just use ChatGPT?{#sec-encoders}
 
-Modern language models[^transformer] fall into two families, which differ in what they produce:
+Modern language models[^transformer] come in two families, and they differ in what they produce and in how they learn your annotation categories:
 
-- **Decoder models** — GPT, Llama, Claude, the models behind ChatGPT and similar tools — produce text, and are the right tool for open-ended tasks: conversation, drafting, summarising, translating. They're very large, rarely runnable on a personal computer, and typically used through an API, as in the [previous tutorial](https://www.css.cnrs.fr/classification-with-generative-llms-and-api-calls/).
-- **Encoder models** — BERT and its relatives — produce no text, but an **embedding**: a numerical representation of a text's meaning. This makes them the right tool for tasks with a closed, well-defined output, such as classification, similarity ranking, or clustering. They're much smaller, and will most likely run on your own machine[^7].
+- **Decoder models** (GPT, Llama, Claude, the models behind ChatGPT and similar tools) produce text, so they are well suited to open-ended tasks such as conversation, drafting, summarising or translation. To annotate a corpus with a decoder, you have to instruct it every time through a prompt, and hope it interprets your instructions correctly. These models are very large, rarely runnable on a personal computer, and typically used through an API, as we did in the [previous tutorial](https://www.css.cnrs.fr/classification-with-generative-llms-and-api-calls/).
+- **Encoder models** (BERT and its relatives) produce no text at all, but an **embedding**: a numerical representation of a text's meaning. This makes them well suited to tasks with a closed, well-defined output, such as classification, similarity ranking or clustering. Rather than being prompted, an encoder is **fine-tuned** on a few hundred texts you label yourself: it learns from your judgment calls, not from a description of them. Encoders are much smaller than decoders, and will most likely run on your own machine[^7].
+
+That upfront annotation effort, and a model that only ever performs this one task, is the price you pay for an encoder — but in exchange, you keep full control over it. This has concrete consequences for cost, confidentiality and reproducibility, which we discuss next.
 
 [^transformer]: Most are built on the **Transformer** architecture, introduced by Google in 2017 — the same word behind the `transformers` Python library you'll use throughout this tutorial.
 
 [^7]: It tends to be less likely as newer models tend to be larger. Read more in the [Choose and load a model](#choose-and-load-a-model) section.
 
-Both families can annotate a corpus, but they learn your categories differently:
-
-- A decoder has to be instructed every time, via a prompt — you're relying on it interpreting your instructions correctly.
-- An encoder is **fine-tuned** on a few hundred texts you label yourself — it learns from your judgment calls, not a description of them.
-
-That upfront annotation effort — and a resulting model that only does this one task — is the price of an encoder, in exchange for a model you fully control. This has concrete consequences for cost, confidentiality and reproducibility, covered next.
-
 ### Pros and cons for social science research{#sec-pros-cons}
 
-- **Coding skills**: fine-tuning requires more code than an API call — a chance to build skills, at the cost of time. [ActiveTigger](css.cnrs.fr/active-tigger) offers a code-free alternative for collaborative annotation and fine-tuning.
+- **Coding skills**: fine-tuning requires more code than an API call, which is both an opportunity to build skills and a cost in time. [ActiveTigger](css.cnrs.fr/active-tigger) offers a code-free alternative for collaborative annotation and fine-tuning.
 
 <!--TODO add logo-->
 
-- **Hardware and cost**: fine-tuning needs a machine to run on; API calls need a paid key. Neither is equally accessible to everyone.
-- **Control and reproducibility**: most providers disclose neither the data their models were trained on nor future changes to them, which limits interpretability. Since you own the encoder and its fine-tuning data, your results stay reproducible and easier to interpret (XXX additional techniques to probe the model???).
-- **Open weights**: most generative models are "closed weights" — usable only through an API — while HuggingFace models, encoder or generative, are "open weights" and downloadable, which matters for reproducibility (source with varying performance through after different model updates).
-- **Confidentiality**: sensitive corpora cannot go through an external API; you would need to run any model, generative or encoder, on a trusted server. An encoder's lighter hardware needs make that bar easier to clear.
+- **Hardware and cost**: fine-tuning needs a machine to run on, while API calls need a paid key; neither is equally accessible to everyone.
+- **Confidentiality**: sensitive corpora cannot be sent through an external API, so any model, generative or encoder, has to run on a trusted server instead. Encoders, being lighter on hardware, make that bar easier to clear.
+- **Open weights, control and reproducibility**: most generative models are "closed weights", usable only through an API, while HuggingFace models, encoder or generative, are "open weights" and can be downloaded. Providers rarely disclose the data behind a closed model or its future changes, which limits interpretability and means performance can shift after an update (source). Since you own the encoder and its fine-tuning data, your results stay reproducible and easier to interpret (XXX additional techniques to probe the model???).
+
+### How encoders represent text
 
 The rest of this tutorial deals with encoder models only (AM: or maybe embedding models ? JB what's the difference?): texts close in meaning are given close embeddings, a proximity measured by the "similarity score" (usually the cosine distance).
 
@@ -162,7 +158,7 @@ The rest of this tutorial deals with encoder models only (AM: or maybe embedding
 
 In @fig-similarity, "apple" and "pear" score high in similarity — but in the context of Apple's new product, "apple"'s embedding shifts and the score drops. Classification works the same way: for a "left/right" label, the embeddings should capture what sets left-wing texts apart from right-wing ones.
 
-One last practical property: the **maximum context window**, the maximum[^max-window-size-actually] number of tokens[^tokens-def] a model can process at once — anything beyond is simply ignored. Older models had short windows (128 to 512 tokens), so long texts had to be split into sentences or paragraphs.
+Every encoder also has a **maximum context window**: the maximum[^max-window-size-actually] number of tokens[^tokens-def] it can process at once — anything beyond is simply ignored. Older models had short windows (128 to 512 tokens), so long texts had to be split into sentences or paragraphs.
 
 [^max-window-size-actually]: Some techniques allow users to exceed the maximum context window, please refer to XXX @ Léo @ Alexandre
 
