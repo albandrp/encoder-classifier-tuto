@@ -212,9 +212,7 @@ df_raw.head()
 |---|---|---|---|---|---|---|---|
 |  0 | disagrees   |      -1     | Global warming is a hoax.                                                                                                                            | disagrees  | disagrees  | s0        | ... |
 |  1 | neutral     |       0.375 | Alarming levels of sea level rise are predicted to threaten Florida over the next decades.                                                           | neutral    | neutral    | s1        | ... |
-|  2 | neutral     |       0     | Over the past several years, the United States has seen an increase in business growth that has counteracted the lingering effects of the recession. | ... |neutral    | neutral    | s2        |
 |  3 | agrees      |       1     | Global warming is happening and it will be dangerous to human health and welfare.                                                                    | agrees     | agrees     | s3        | ... |
-|  4 | neutral     |       0     | Some icebergs are cute.                                                                                                                              | neutral    | neutral    | s4        | ... |
 
 
 We will first need to explore the dataset and get a graps of its content as well as possible biases. 
@@ -355,9 +353,7 @@ df_clean
 |---|---|---|---|---|---|---|---|
 |  0 | t0        | Warmer-than-normal s... | agrees       |       0.625 | ID-0005 |            170 | Warmer-than-normal s... |
 |  1 | t1        | We will continue to ... | neutral      |       0     | ID-0006 |             94 | We will continue to ... |
-|  2 | t10       | The actual rise in s... | neutral      |       0     | ID-0007 |            118 | The actual rise in s... |
 |  3 | t11       | Claims of global war... | disagrees    |      -1     | ID-0008 |             55 | Claims of global war... |
-|  4 | t12       | The Intergovernmenta... | neutral      |      -0.125 | ID-0009 |            173 | The Intergovernmenta... |
 
 
 :::{.callout-warning}
@@ -442,7 +438,7 @@ In this tutorial we use the Transformers package, maintained by [HuggingFace](ht
 
 [^huggingface]: HuggingFace is a company for profit specialised in NLP and machine learning. They maintain many SOTA libraries such as [Transformers](https://huggingface.co/docs/transformers/index), [Datasets](https://huggingface.co/docs/datasets/index) or [Sentence Transormers](https://sbert.net/). On top of maintaining the libraries, they publish posts about the latest tech, tutorials on their libraries, host a forum for debugging but also propose inference and training solutions if you don't have access the required hardware.
 
-:::{.callout-note title="How to choose a model"}
+:::{.callout-note title="How to choose a model" collapse="true"}
 Models and their performance are highly sensitive to the task and context of use. When implementing an NLP task you might want to try several models to compare their performance. When choosing a model you want to take into account the following parameters: 
 
 - What task was the model trained for? You can see the list of tasks when [browsing HuggingFace's models](https://huggingface.co/models). In the context of this tutorial, we want to perform a **Text Classification** task. 
@@ -466,10 +462,10 @@ label2id = {label:id  for id, label in enumerate(labels)}
 
 MODEL_NAME = "google-bert/bert-base-uncased"
 model = AutoModelForSequenceClassification.from_pretrained(
-    MODEL_NAME, 
+    MODEL_NAME,
     num_labels=num_labels,
     id2label=id2label,
-    label2id=label2id,                                     
+    label2id=label2id,
 )
 ```
 :::{.callout-warning}
@@ -794,9 +790,9 @@ for batch in tqdm(dsd["dev"].batch(8)):
     logits = model(input_ids = batch["input_ids"], attention_mask = batch["attention_mask"]).logits.softmax(1).numpy()
     y_pred += [np.argmax(logits, axis=1)]
 results = pd.DataFrame({
-  "ID": np.concat(ID),
+  "ID": np.concat(IDs),
   "gold": np.concat(y_gold),
-  "pred": np.concat(pred)
+  "pred": np.concat(y_pred)
 })
 ```
 :::
@@ -1038,12 +1034,12 @@ for batch in tqdm(dsd["dev"].batch(8)):
       model(input_ids = batch["input_ids"], attention_mask= batch["attention_mask"])
       .logits.cpu().softmax(1).float().numpy()
     )
-    y_pred += [np.array([loop_config.id2label[int(y)] for y in y_pred])]
+    y_pred += [np.argmax(probs, axis=1)]
 
 results = pd.DataFrame({
-  "ID": np.concat(ID),
+  "ID": np.concat(IDs),
   "gold": np.concat(y_gold),
-  "pred": np.concat(pred)
+  "pred": np.concat(y_pred)
 })
 ```
 
@@ -1075,7 +1071,7 @@ try:
 except Exception as e:
     print("# ERROR" + "#" * 93)
     print(e)
-    print"#" * 100)
+    print("#" * 100)
 
 finally:
     del tokenizer, model, dsd, trainer # All objects that are moved to the GPU
