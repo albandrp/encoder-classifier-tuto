@@ -851,28 +851,101 @@ You now have all the technical knowledge necessary to fine-tune most classificat
 
 # Training pipeline: advanced practices{#sec-advanced}
 
-## What the hyperparameters are for{#sec-hyperparameters-description}
+## Diagnose and fix training problems{#sec-hyperparameters-tuning}
 
-In @sec-training-parameters we set a number of hyperparameters without saying much about them. Rather than describing each one in isolation, we present them here through the problems they are meant to solve, because this is how you will encounter them in practice: you run a fine-tuning, you observe that something went wrong, and you change the hyperparameter that addresses it.
+In @sec-essentials we fine-tuned a BERT model and saved checkpoints containing crucial information; one of them is the learning curve. The learning curve tracks the loss function[^lossFunction] — a measure of the distance between the predicted labels and the gold standard labels — on the train set and the dev set as training progresses. We can retrieve it from the logs in `trainer_state.json` and plot it:
 
-To follow this section, one mental image is enough. Fine-tuning proceeds by small successive corrections: the model reads a **batch** of annotated texts, compares its predictions with your annotations, and adjusts its parameters slightly in the direction that reduces the gap. It then moves on to the next batch, and repeats until it has gone through the entire training set — that is one **epoch**. The hyperparameters below govern *how many* texts the model reads before each correction, *how large* each correction is, and *how many times* the model goes through your data.
+[^lossFunction]: The loss function is a function measuring the distance between the predicted labels and the gold standard labels.
 
-**Problem 1: the model has learned nothing**
+```python
+# TODO update and make it simpler
+import json
+import plotly.express as px
 
-At the end of the fine-tuning, the metrics are barely better than chance and the losses (@sec-hyperparameters-tuning) have hardly moved. The corrections applied to the model were either too small to have any effect, or too few.
+with open("./models/training/trainer_state.json", "r") as file:  # MODIFY !!!
+    training_state = json.load(file)
+
+loss = []
+
+for log in training_state ["log_history"]:
+    step = log["step"]
+    if "loss" in log:
+        loss += [{"step": step, "loss": log["loss"], "split": "train"}]
+    elif "eval_loss" in log:
+        loss += [{"step": step, "loss": log["eval_loss"], "split": "eval"}]
+    else:
+        # thweird
+        print(log)
+
+loss = pd.DataFrame(loss)
+
+px.line(loss, x = "step", y = "loss", color =  "split")
+```
+
+![Learning curve](./assets/learning_curve.png){#fig-learning-curve width=70%}
+
+The train loss decreases steadily towards 0, while the dev loss decreases, reaches a minimum, then rises again. That rise is expected: it simply means the model keeps memorising the train set past the point where it stopped generalising better, which is why we reload the checkpoint at the minimum (@sec-evaluation) rather than the last one. What matters is how low that minimum is, and how the two curves sit relative to each other. Here is the pattern to aim for:
+
+::::{.columns}
+
+:::{.column width=50%}
+
+**The perfect case scenario**
+
+- Both curves went down during training: the model has learned
+- Both curves have the same loss values: no overfitting
+- The curves are flat at the end: nothing more to be learned, apparently
+
+Once your learning curve looks like this, you only have to look at the evaluation metrics to see if you are satisfied with the prediction quality. If it does not, one of the problems below is likely the cause — each comes with the hyperparameters that fix it.
+
+:::
+
+:::{.column width=50%}
+
+![](./assets/bertrain-good.png)
+
+:::
+
+::::
+
+To follow the rest of this section, one mental image is enough. Fine-tuning proceeds by small successive corrections: the model reads a **batch** of annotated texts, compares its predictions with your annotations, and adjusts its parameters slightly in the direction that reduces the gap. It then moves on to the next batch, and repeats until it has gone through the entire training set — that is one **epoch**. The hyperparameters below govern *how many* texts the model reads before each correction, *how large* each correction is, and *how many times* the model goes through your data.
+
+**Problem 1: the model hasn't learned enough**
+
+::::{.columns}
+
+:::{.column width=50%}
+
+![Flat: nothing learned](./assets/bertrain-flat.png)
+
+:::
+
+:::{.column width=50%}
+
+![Still trending down: not done yet](./assets/bertrain-more.png)
+
+:::
+
+::::
+
+At one extreme, both curves stay flat throughout training (left): the metrics are barely better than chance, and the losses have hardly moved — the corrections applied to the model were either too small to have any effect, or too few. At the other extreme, both curves are still going down together with no plateau in sight (right): the model is learning correctly, it simply hasn't finished.
 
 - The **learning rate** 🟢🟢🟢 _(importance)_ sets the size of each correction. It is by far the most consequential hyperparameter: set too low, the fine-tuning leaves the model essentially unchanged. Try increasing it. Typical values: $[1e-6, 1e-4]$.
 - The **number of epochs** 🟢 sets how many times the model goes through your training set. If performance was still improving when training stopped, the model simply did not get enough passes over your data. Typical values: 3-5, bearing in mind that each additional epoch costs computation time.
 
 **Problem 2: the model has learned your training set by heart**
 
-The model performs very well on the texts it was trained on, and noticeably worse on the dev set. It has memorised your training examples instead of learning the distinction you are after. This is called **overfitting**, and it is the most common failure in this kind of project, particularly when annotations are few.
+![Overfitting](./assets/bertrain-overfit.png){width=50%}
+
+The model performs very well on the texts it was trained on, and noticeably worse on the dev set: both curves went down, but the train curve sits much lower than the dev curve. It has memorised your training examples instead of learning the distinction you are after. This is called **overfitting**, and it is the most common failure in this kind of project, particularly when annotations are few.
 
 - The **weight decay**[^alias-weight-decay] 🟢🟢 discourages the model from adopting extreme parameter values, which is the mechanism through which memorisation usually happens. Increasing it constrains the model and pushes it towards more general solutions; setting it too high prevents it from learning at all. Typical values: 0.01-0.1.
 - Lowering the **learning rate** or the **number of epochs** works towards the same end: fewer and gentler corrections leave the model less opportunity to fit the specifics of your examples.
 - The most reliable remedy, however, is not a hyperparameter: annotate more data.
 
 **Problem 3: the fine-tuning is erratic**
+
+![Erratic training](./assets/bertrain-chaos.png){width=50%}
 
 Performance jumps up and down from one evaluation to the next instead of improving steadily. The corrections are being computed on too little evidence at a time, so each one chases the peculiarities of a handful of texts rather than a general pattern.
 
@@ -881,7 +954,7 @@ Performance jumps up and down from one evaluation to the next instead of improvi
 
 **Problem 4: the fine-tuning does not fit on your machine**
 
-Large batches are desirable, but the whole batch must be held in memory at once, and this is usually where a personal computer gives up (see @sec-GPU). The way around it is to accumulate several small batches before applying a correction, which is almost equivalent and requires far less memory:
+This one does not show up on the learning curve: large batches are desirable, but the whole batch must be held in memory at once, and this is usually where a personal computer gives up (see @sec-GPU). The way around it is to accumulate several small batches before applying a correction, which is almost equivalent and requires far less memory:
 
 $$\text{Batch size} = \text{Device batch size} \times \text{Gradient accumulation steps}$$
 
@@ -897,190 +970,6 @@ If you only change one hyperparameter, change the learning rate. A reasonable st
 [^alias-weight-decay]: AKA: L2-regularization.
 
 [^note-save-total-limit]: If you use `load_best_model_at_end=True`, make sure to have `save_total_limit` > 2, otherwise the best model will be overwritten by the last model ([documentation](https://huggingface.co/docs/transformers/main_classes/trainer#transformers.TrainingArguments.save_total_limit)).
-
-## Read the learning curve{#sec-hyperparameters-tuning}
-
-In @sec-essentials we fine-tuned a BERT model and saved checkpoints containing crucial information; one of them is the lerning curve. The learning curve provides the evolution of the model's performance using the loss function[^lossFunction] evaluated on the train set and the train-eval set. We can retrieve it by using the logs in the `trainer_state.json`; plot it: 
-
-[^lossFunction]: The loss function is a function measuring the distance between the predicted labels and the gold standard labels.
-
-```python 
-# TODO update and make it simpler
-import json
-import plotly.express as px 
-
-with open("./models/training/trainer_state.json", "r") as file:  # MODIFY !!!
-    training_state = json.load(file)
-
-loss = []
-
-for log in training_state ["log_history"]:
-    step = log["step"]
-    if "loss" in log:
-        loss += [{"step": step, "loss": log["loss"], "split": "train"}]
-    elif "eval_loss" in log:
-        loss += [{"step": step, "loss": log["eval_loss"], "split": "eval"}]
-    else: 
-        # thweird
-        print(log)
-
-loss = pd.DataFrame(loss)
-
-px.line(loss, x = "step", y = "loss", color =  "split") 
-```
-
-![Learning curve](./assets/learning_curve.png){#fig-learning-curve width=70%}
-
-::::{.columns}
-
-:::{.column-body}
-
-The learning curve follows the expected pattern. The loss curve for the train split decreases and reaches 0 over time whereas the loss curve on the train-eval split decreases until it reaches a minimum and then increases. We want the learning curve to look like that, and we want the minimum to be as low as possible. 
-
-:::
-
-::: {.column-margin}
-
-![Typical learning curve](./assets/typical_learning_curve){#fig-01-01}
-
-:::
-
-::::
-
-Here are additional examples: 
-
-::::{.columns}
-
-:::{.column width=50%}
-
-**The perfect case scenario**
-
-- Both curves went down during training: the model has learned
-- Both curves have the same loss values: no overfitting
-- The curves are flat at the end: nothing more to be learned, apparently
-
-Now you only have to look at the evaluation metrics to see if you are satisfied with the prediction quality.
-
-:::
-
-:::{.column width=50%}
-
-![](./assets/bertrain-good.png)
-
-:::
-
-::::
-
---- 
-
-::::{.columns}
-
-:::{.column width=50%}
-
-The model has **overfitted**
-
-- Both curves went down during training: the model has learned.
-- But the training curve is much lower than the evaluation curve.
-
-What to do:
-
-- choose a lower learning rate, for slower weight updates.
-- Increase batch size in order to smooth training over more examples per training step.
-- Increase weight decay to prevent overfitting.
-- Annotate more , you may not have enough examples for the model to learn from.
-
-:::
-
-:::{.column width=50%}
-
-![](./assets/bertrain-overfit.png)
-
-:::
-
-::::
-
---- 
-
-::::{.columns}
-
-:::{.column width=50%}
-
-The model has **underfitted**: Both curves are flat, the model learned nothing
-
-What to do:
-
-- Increase learning rate for faster weight updates.
-- Decrease batch size to increase the number of training steps.
-- Decrease weight decay, too much regularization can prevent proper learning.
-- Annotate more data, you may not have enough examples for the model to learn from
-
-:::
-
-:::{.column width=50%}
-
-![](./assets/bertrain-flat.png)
-
-:::
-
-::::
-
---- 
-
-::::{.columns}
-
-:::{.column width=50%}
-
-**You're on the right track**
-
-- Both curves went down during training: the model has learned.
-- Both curves have the same loss values: no overfitting.
-- But there is no plateau at the end, the curves are still going down.
-
-What to do:
-
-- Increase the number epochs to increase the number of training steps.
-- Increase the learning rate for faster weight updates.
-- Decrease the batch size to increase the number of training steps.
-- Decrease weight decay, too much regularization can prevent proper learning.
-
-
-:::
-
-:::{.column width=50%}
-
-![](./assets/bertrain-more.png)
-
-:::
-
-::::
-
---- 
-
-::::{.columns}
-
-:::{.column width=50%}
-
-The model is trying to learn too fast:
-
-- Curves should be going down, not up and down.
-- Some learning has occured, but you can probably do better.
-
-What to do:
-
-- Decrease the learning rate for gentlier weight update.
-- Increase the batch size in order to smooth training over more examples per training step.
-- Increase the weight decay to prevent overfitting.
-- Annotate more data, you may not have enough examples for the model to learn from.
-
-:::
-
-:::{.column width=50%}
-
-![](./assets/bertrain-chaos.png)
-
-:::
-
-::::
 
 ## Use GPU for faster training{#sec-GPU}
 
