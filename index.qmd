@@ -969,7 +969,7 @@ If you only change one hyperparameter, change the learning rate. A reasonable st
 
 ## Use GPU for faster training{#sec-GPU}
 
-For now we have only used the CPU to perform the training, but it is slow and alternatives exist. If you have a NVIDIA GPU[^2] and have set up your cuda[^3] environment, you may accelerate the process. Also, if you have a Mac with an MX chip, you can use mps to accelerate the training. 
+This section is only useful if you have access to a GPU; if you don't, training on CPU works exactly as shown earlier, just slower, and you can skip ahead to @sec-errors. If you have a NVIDIA GPU[^2] and have set up your cuda[^3] environment, or a Mac with an MX chip, you can accelerate training with cuda or mps respectively.
 
 [^2]: [AMD GPUs do not have access to cuda](https://www.tutorialpedia.org/blog/is-it-possible-to-run-cuda-on-amd-gpus/#2-closed-source-ecosystem) but you can work you way out with alternative solutions like [ZLuda](https://github.com/vosen/ZLUDA)
 
@@ -1082,13 +1082,13 @@ finally:
     gc_collect()
 ```
 
-## Read the errors
+## Read the errors{#sec-errors}
 
-You will face many, many errors. Sometimes they are random and rerunning the script / restarting the kernel will solve the issue. Others are subtle and difficult to identify. In such case, copy paste the error in google (in our experience, genAI is less likely to provide you the right answer), you'll find forums with people who faced the same issue. As stressed in the introduction, downgrading/upgrading some libraries is likely to solve the issue.
+You will face many, many errors. Sometimes they are random and rerunning the script / restarting the kernel will solve the issue. Others are subtle and difficult to identify. In such case, copy paste the error in google (in our experience, genAI is less likely to provide you the right answer), you'll find forums with people who faced the same issue. As stressed in the introduction, downgrading/upgrading some libraries is likely to solve the issue. The four issues below are the ones you are most likely to run into — keep this section as a reference to come back to rather than something to read end to end.
 
-### Dataset formatting
+:::{.callout-note title="Dataset formatting" collapse="true"}
 
-Many errors are raised due to the functions assuming that your columns are well named and that the data has the right format. Make sure to have the following: 
+Many errors are raised due to the functions assuming that your columns are well named and that the data has the right format. Make sure to have the following:
 
 - `"text"` column with the text as string
 - `"labels"` column with the labels as int; if you have multiple labels. Make sure this is a Tensor of integers
@@ -1097,36 +1097,44 @@ Many errors are raised due to the functions assuming that your columns are well 
 
 Also, depending on the model you're using these columns can have different names. Make sure to check the huggingface documentation related to the model you are using as well as forums.
 
-### Memory overflow
+:::
 
-If you face this error using a GPU : 
+:::{.callout-note title="Memory overflow" collapse="true"}
 
-```txt 
+If you face this error using a GPU :
+
+```txt
 NVML_SUCCESS == r INTERNAL ASSERT FAILED at "/home/conda/feedstock_root/build_artifacts/libtorch_1750199048837/work/c10/cuda/CUDACachingAllocator.cpp":1016, please report a bug to PyTorch.
 ```
 
 It is likely that you have reached the memory limit of your hardware. Reducing the device batch size or using a smaller model is likely to solve your issue. If you use a CPU the error becomes: `Invalid buffer size: `
 
-### Tensor shapes
+:::
 
-If you face the following error: 
+:::{.callout-note title="Tensor shapes" collapse="true"}
 
-```txt 
+If you face the following error:
+
+```txt
 ValueError: too many values to unpack (expected 2)
 ```
 
 The issue is likely to come from the tokenization step. If you type: `dsd["train"][0]["input_ids"].shape`, it must return `torch.Size([400])` and not `torch.Size([1, 400])`. Ensure that the tokenizer does not use `return_tensors="pt"` and that you use `dsd.with_format("torch")`.
 
-### Missing keys when saving/reloading a checkpoint
+:::
 
-You might face this scary issue: 
+:::{.callout-note title="Missing keys when saving/reloading a checkpoint" collapse="true"}
 
-```txt 
+You might face this scary issue:
+
+```txt
 There were missing keys in the checkpoint model loaded: ['bert.embeddings.LayerNorm.weight', ...
 There were unexpected keys in the checkpoint model loaded: ['bert.embeddings.LayerNorm.beta', ...
 ```
 
 This is merely a convention issue. Some models/versions use beta/gamma keywords instead of weights/biases. This is not a problem and the model solve this automatically. If the loaded model shows unexpected low performance, this might be a sign that the model did not solve this issue automatically. You might have to rename the parameters yourself using the right convention _(very unlikely)_.
+
+:::
 
 # Some good practices
 
