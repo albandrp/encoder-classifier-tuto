@@ -370,10 +370,11 @@ Learn more about neural networks
 <li><strong>Decoder models</strong> (GPT, Llama, Claude, the models behind ChatGPT and similar tools) produce text, so they are well suited to open-ended tasks such as conversation, drafting, summarising or translation. To annotate a corpus with a decoder, you have to instruct it every time through a prompt, and hope it interprets your instructions correctly. These models are very large, rarely runnable on a personal computer, and typically used through an API, as we did in the <a href="https://www.css.cnrs.fr/classification-with-generative-llms-and-api-calls/">previous tutorial</a>.</li>
 <li><strong>Encoder models</strong> (BERT and its relatives) produce no text at all, but an <strong>embedding</strong>: a numerical representation of a text’s meaning. This makes them well suited to tasks with a closed, well-defined output, such as classification, similarity ranking or clustering. Rather than being prompted, an encoder is <strong>fine-tuned</strong> on a few hundred texts you label yourself: it learns from your judgment calls, not from a description of them. Encoders are much smaller than decoders, and will most likely run on your own machine<a href="#fn8" class="footnote-ref" id="fnref8" role="doc-noteref"><sup>8</sup></a>.</li>
 </ul>
-<p>That upfront annotation effort, and a model that only ever performs this one task, is the price you pay for an encoder — but in exchange, you keep full control over it. This has concrete consequences for cost, confidentiality and reproducibility, which we discuss next.</p>
+<p>That upfront annotation effort, and a model that only ever performs this one task, is the price you pay for an encoder — but in exchange, you keep full control over it. This has concrete consequences for cost, confidentiality, reproducibility and even measurement quality, which we discuss next.</p>
 <section id="sec-pros-cons" class="level3">
 <h3 class="anchored" data-anchor-id="sec-pros-cons">Pros and cons for social science research</h3>
 <ul>
+<li><strong>Measurement quality</strong>: the choice isn’t just a matter of convenience — it can bias your conclusions. Ashwin et al.&nbsp;(2025) compared the two approaches on interviews with Rohingya refugees and their Bengali hosts: a generative LLM’s coding errors were not random, but systematically correlated with respondents’ characteristics, whereas a model fine-tuned on a subset of human-coded transcripts showed less measurement error and bias overall.</li>
 <li><strong>Coding skills</strong>: fine-tuning requires more code than an API call, which is both an opportunity to build skills and a cost in time. <a href="css.cnrs.fr/active-tigger">ActiveTigger</a> offers a code-free alternative for collaborative annotation and fine-tuning.</li>
 </ul>
 <!--TODO add logo-->
@@ -1582,6 +1583,7 @@ Missing keys when saving/reloading a checkpoint
 </section>
 <section id="bibliography" class="level1">
 <h1>Bibliography</h1>
+<p>Ashwin, J., Chhabra, A., &amp; Rao, V. (2025). Using Large Language Models for Qualitative Analysis can Introduce Serious Bias. <em>Sociological Methods &amp; Research</em>, 55(3), 795–839. https://doi.org/10.1177/00491241251338246</p>
 
 
 </section>
