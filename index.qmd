@@ -134,7 +134,7 @@ Modern language models[^transformer] come in two families, and they differ in wh
 - **Decoder models** (GPT, Llama, Claude, the models behind ChatGPT and similar tools) produce text, so they are well suited to open-ended tasks such as conversation, drafting, summarising or translation. To annotate a corpus with a decoder, you have to instruct it every time through a prompt, and hope it interprets your instructions correctly. These models are very large, rarely runnable on a personal computer, and typically used through an API, as we did in the [previous tutorial](https://www.css.cnrs.fr/classification-with-generative-llms-and-api-calls/).
 - **Encoder models** (BERT and its relatives) produce no text at all, but an **embedding**: a numerical representation of a text's meaning. This makes them well suited to tasks with a closed, well-defined output, such as classification, similarity ranking or clustering. Rather than being prompted, an encoder is **fine-tuned** on a few hundred texts you label yourself: it learns from your judgment calls, not from a description of them. Encoders are much smaller than decoders, and will most likely run on your own machine[^7].
 
-That upfront annotation effort, and a model that only ever performs this one task, is the price you pay for an encoder — but in exchange, you keep full control over it. This has concrete consequences for cost, confidentiality and reproducibility, which we discuss next.
+That upfront annotation effort, and a model that only ever performs this one task, is the price you pay for an encoder — but in exchange, you keep full control over it. This has concrete consequences for cost, confidentiality, reproducibility and even measurement quality, which we discuss next.
 
 [^transformer]: Most are built on the **Transformer** architecture, introduced by Google in 2017 — the same word behind the `transformers` Python library you'll use throughout this tutorial.
 
@@ -142,6 +142,7 @@ That upfront annotation effort, and a model that only ever performs this one tas
 
 ### Pros and cons for social science research{#sec-pros-cons}
 
+- **Measurement quality**: the choice isn't just a matter of convenience — it can bias your conclusions. Ashwin et al. (2025) compared the two approaches on interviews with Rohingya refugees and their Bengali hosts: a generative LLM's coding errors were not random, but systematically correlated with respondents' characteristics, whereas a model fine-tuned on a subset of human-coded transcripts showed less measurement error and bias overall.
 - **Coding skills**: fine-tuning requires more code than an API call, which is both an opportunity to build skills and a cost in time. [ActiveTigger](css.cnrs.fr/active-tigger) offers a code-free alternative for collaborative annotation and fine-tuning.
 
 <!--TODO add logo-->
@@ -1157,4 +1158,6 @@ In this tutorial we covered many topics:
 - In @sec-essentials we laid out the usual fine-tuning pipeline including data processing and formatting, choosing the model, launching the fine-tuning and assessing the performance. @sec-essentials-conclusion summarises the main steps.
 - In @sec-advanced we stopped on more complex concepts such as the reading curve and provided instructions on how to tweak the hyperparameters. This section also discusses using GPU for quicker training and provides hotfixes for common errors.
 
-# Bibliography 
+# Bibliography
+
+Ashwin, J., Chhabra, A., & Rao, V. (2025). Using Large Language Models for Qualitative Analysis can Introduce Serious Bias. *Sociological Methods & Research*, 55(3), 795–839. https://doi.org/10.1177/00491241251338246 
