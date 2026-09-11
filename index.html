@@ -1,0 +1,2010 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.4.550">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="A. Morin">
+
+<title>Augmented tuto - Augmented Social Scientist: train encoder models on a classification task</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<script src="site_libs/quarto-html/quarto.js"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<meta name="robots" content="noindex, nofollow">
+
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN") {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="nav-fixed">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="./index.html">
+    <span class="navbar-title">Augmented tuto</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link active" href="./index.html" aria-current="page"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./appendices.html"> 
+<span class="menu-text">Appendices</span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+          <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction">Introduction</a>
+  <ul class="collapse">
+  <li><a href="#objectives-and-materials" id="toc-objectives-and-materials" class="nav-link" data-scroll-target="#objectives-and-materials">Objectives and materials</a></li>
+  <li><a href="#install-environment" id="toc-install-environment" class="nav-link" data-scroll-target="#install-environment">Install environment:</a></li>
+  </ul></li>
+  <li><a href="#sec-key-concepts" id="toc-sec-key-concepts" class="nav-link" data-scroll-target="#sec-key-concepts">Key concepts and valuable resources to start your NLP journey</a>
+  <ul class="collapse">
+  <li><a href="#sec-classification-task" id="toc-sec-classification-task" class="nav-link" data-scroll-target="#sec-classification-task">The classification task</a></li>
+  <li><a href="#models" id="toc-models" class="nav-link" data-scroll-target="#models">Models</a></li>
+  <li><a href="#sec-encoders" id="toc-sec-encoders" class="nav-link" data-scroll-target="#sec-encoders">Encoders vs.&nbsp;decoders — why not just use ChatGPT?</a>
+  <ul class="collapse">
+  <li><a href="#sec-pros-cons" id="toc-sec-pros-cons" class="nav-link" data-scroll-target="#sec-pros-cons">Pros and cons for social science research</a></li>
+  <li><a href="#how-encoders-represent-text" id="toc-how-encoders-represent-text" class="nav-link" data-scroll-target="#how-encoders-represent-text">How encoders represent text</a></li>
+  </ul></li>
+  <li><a href="#pretrained-models-and-fine-tuning" id="toc-pretrained-models-and-fine-tuning" class="nav-link" data-scroll-target="#pretrained-models-and-fine-tuning">Pretrained Models and Fine-tuning</a></li>
+  </ul></li>
+  <li><a href="#sec-essentials" id="toc-sec-essentials" class="nav-link" data-scroll-target="#sec-essentials">Fine-tuning pipeline: the essential</a>
+  <ul class="collapse">
+  <li><a href="#sec-preprocess" id="toc-sec-preprocess" class="nav-link" data-scroll-target="#sec-preprocess">Load and preprocess your data</a></li>
+  <li><a href="#choose-and-load-a-model" id="toc-choose-and-load-a-model" class="nav-link" data-scroll-target="#choose-and-load-a-model">Choose and load a model</a></li>
+  <li><a href="#fine-tune-the-model" id="toc-fine-tune-the-model" class="nav-link" data-scroll-target="#fine-tune-the-model">Fine-tune the model</a>
+  <ul class="collapse">
+  <li><a href="#sec-tokenization" id="toc-sec-tokenization" class="nav-link" data-scroll-target="#sec-tokenization">Tokenize the dataset</a></li>
+  <li><a href="#sec-training-parameters" id="toc-sec-training-parameters" class="nav-link" data-scroll-target="#sec-training-parameters">Setup fine-tuning hyperparameters</a></li>
+  <li><a href="#launch-fine-tuning" id="toc-launch-fine-tuning" class="nav-link" data-scroll-target="#launch-fine-tuning">Launch fine-tuning</a></li>
+  </ul></li>
+  <li><a href="#sec-evaluation" id="toc-sec-evaluation" class="nav-link" data-scroll-target="#sec-evaluation">Use model for inference and evaluate performance</a></li>
+  <li><a href="#sec-essentials-conclusion" id="toc-sec-essentials-conclusion" class="nav-link" data-scroll-target="#sec-essentials-conclusion">Conclusion</a></li>
+  </ul></li>
+  <li><a href="#sec-advanced" id="toc-sec-advanced" class="nav-link" data-scroll-target="#sec-advanced">Training pipeline: advanced practices</a>
+  <ul class="collapse">
+  <li><a href="#sec-hyperparameters-tuning" id="toc-sec-hyperparameters-tuning" class="nav-link" data-scroll-target="#sec-hyperparameters-tuning">Diagnose and fix training problems</a></li>
+  <li><a href="#sec-GPU" id="toc-sec-GPU" class="nav-link" data-scroll-target="#sec-GPU">Use GPU for faster training</a></li>
+  <li><a href="#sec-errors" id="toc-sec-errors" class="nav-link" data-scroll-target="#sec-errors">Read the errors</a></li>
+  </ul></li>
+  <li><a href="#some-good-practices" id="toc-some-good-practices" class="nav-link" data-scroll-target="#some-good-practices">Some good practices</a>
+  <ul class="collapse">
+  <li><a href="#save-your-model-and-results" id="toc-save-your-model-and-results" class="nav-link" data-scroll-target="#save-your-model-and-results">Save your model and results</a></li>
+  <li><a href="#on-annotating-your-dataset" id="toc-on-annotating-your-dataset" class="nav-link" data-scroll-target="#on-annotating-your-dataset">On annotating your Dataset</a></li>
+  <li><a href="#whats-a-good-score" id="toc-whats-a-good-score" class="nav-link" data-scroll-target="#whats-a-good-score">What’s a good score?</a></li>
+  </ul></li>
+  <li><a href="#conclusion" id="toc-conclusion" class="nav-link" data-scroll-target="#conclusion">Conclusion</a></li>
+  <li><a href="#bibliography" id="toc-bibliography" class="nav-link" data-scroll-target="#bibliography">Bibliography</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content page-columns page-full" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Augmented Social Scientist: train encoder models on a classification task</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>A. Morin <a href="mailto:axel.morin@polytechnique.edu" class="quarto-title-author-email"><i class="bi bi-envelope"></i></a> </p>
+          </div>
+  </div>
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<!-- JB: Not sure we need to use the term Augmentation here, we're getting a bit more frileux on this :) -->
+<section id="introduction" class="level1">
+<h1>Introduction</h1>
+<!-- JB: Start by explaining what text annotation is -->
+<!-- ES:  Je commencerai le tutoriel de manière un peu plus douce sur les principales notions, là ça rentre vraiment dans le dur rapidement. Plus, il y a trois stratégies : encoder non finetuné, encoder finetuné et décodeur en inférence non ? On ne parle pas de plongement seuls + ML. Donc peut être un peu mieux situer l'approche, de manière un peu plus intuitive. Et peut être aussi introduire ici le fait qu'un humain est capable d'annoter et qu'on veut étendre cette équation humaine.  -->
+<p>Social scientists dealing with large corpora of documents (tweets, abstracts, newspaper articles, videos, …) often need to annotate each item with one or more labels. To complete this cumbersome task, social scientists have adopted many strategies such as hiring interns, externalise the task to a company such as MTurk, or use computers to do the job (SOURCE of fun fact ?). Since the development of LLMs, it has now become a common practice to use them as annotators in social science contexts (Gilardi et al., 2023; Bonikowski et al, 2022; Do et al., 2022). For instance Claesson (2026) annotated 4.5 million tweets addressed to French members of the parliament. Each tweet could be assigned the labels “attack”, “critique” or “support”. With these annotations, she was able to describe the conditions of hate speech towards French parliamentarians on twitter. <!-- TODO reformulate --> In the Machine Learning jargon, the annotation task is referred to as a “classification task”.</p>
+<p><em>AM: i want to say “its not magic, don’t use an LLM for fun and pretend it’s science”. Dont know if we must, dont know how to phrase it</em><br> These practices are at the intersection of quantitative social sciences and computer science called <em>the Computational Social Sciences</em>. This field of studies builds upon social science theories and leverages computer science methods to scale projects or offer new analyses. In the case of corpus annotation, scientists must define the labels and codebook based on social science theories. To assist social scientists in this task, our team developped <a href="css.cnrs.fr/active-tigger">ActiveTigger</a>, an open-source software, designed by and for social scientists, to support collaborative text annotation and code-free model fine-tuning.</p>
+<p>In this series of tutorials we dive into the technicalities of the classification pipeline using LLMs as annotators. In a previous <a href="https://www.css.cnrs.fr/classification-with-generative-llms-and-api-calls/">tutoriel</a>, we demonstrated how to use generative AI (genAI) for this task; the pipeline consisted of creating an appropriate prompt and retrieving the label in the genAI response. In this tutorial however we demonstrate how to use an encoder model (an LLM that does not generate texts) (AM: JB is it the right term or should we call it an embedding model?) to perform this task. We are going to use smaller<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a> open weights models<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a> and “teach” it how to annotate texts the way an expert would using the supervised learning framework<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a>. Researchers can maintain more control on the model and its performance, however, implementing such techniques requires more NLP knowledge and coding skills. Therefore this tutorial is longer and introduces many concepts that could be overlooked when using black box models.</p>
+<p>The main objective of this tutorial is to <strong>fine-tune</strong> an <strong>encoder model</strong> and introduce the key concepts so you can adapt the code to your specific task.</p>
+<p>After presenting the objectives, materials and setup steps, we introduce the key NLP and Machine Learning concepts, we will break down the pipeline starting with loading the dataset and format it, then load the model and set the hyperparameters, finally launch the fine-tuning process. Once the process finishes, we will assess the performance and discuss how we can tweak the hyperparameters to reach satisfying performance. We conclude this tutorial with advices on how to correctly incorporate the results in a social science project. Throughout the tutoriel we provide practical insights on how to best use your hardware.</p>
+<!-- TODO: write a pros and cons of the two methods -->
+<section id="objectives-and-materials" class="level2">
+<h2 class="anchored" data-anchor-id="objectives-and-materials">Objectives and materials</h2>
+<p>In this tutorial we will :</p>
+<ul>
+<li>Identify the main NLP and Machine Learning concepts.</li>
+<li>Understand the general pipeline for text classification with encoder models.</li>
+<li>Develop some familiarity with preprocessing and training techniques.</li>
+<li>Introduce the key metrics to evaluate models’ performance.</li>
+<li>Discuss how to properly incorporate this step in your research using state-of-the-art practices.</li>
+</ul>
+<p>In this tutorial, we will NOT cover :</p>
+<ul>
+<li>The Python syntax, we expect readers to already have some knowledge of the coding language. See <a href="https://pythonds.linogaliana.fr/">Lino’s course</a> for an introduction</li>
+<li>The fundamentals of NLP and the intersection of linguistics and computer science, we will only introduce concepts necessary to understanding this tutorial. See <a href="https://web.stanford.edu/~jurafsky/slp3/">Jurafsky</a></li>
+<li>The conceptualisation of your research question to fall into the automatic annotation framework, we expect readers to be able to design their protocol and motivate it using appropriate social sciences or any domain speficic concepts.</li>
+</ul>
+<p>We provide a notebook with all cells pre-run <a href="https://github.com/AXLMRIN/encoder-classifier-tuto/blob/main/tuto.ipynb">here</a></p>
+</section>
+<section id="install-environment" class="level2">
+<h2 class="anchored" data-anchor-id="install-environment">Install environment:</h2>
+<p>For this tutorial we use Python version 3.12 and setup the environment with the following command:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install <span class="at">-qU</span> pandas <span class="st">"transformers==4.52.4"</span> datasets ipykernel matplotlib torch <span class="st">"accelerate&gt;=0.26.0"</span> scikit-learn plotly <span class="st">"nbformat&gt;=4.2.0"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<!-- TODO Update -->
+<p>We use SOTA Python librairies such as <a href="https://pytorch.org/">PyTorch</a> and <a href="https://huggingface.co/docs/transformers/index">Transformers</a>. These librairies are well documented and large online communities of users have posted much valuable content to assist you during your journey. More specifically, it is likely that you will face implementation issues related to the versions of the libraries; many forums will guide you into choosing the adequate librairies versions to install depending on your task and model of choice. For this reason, we recommend using a virtual environments manager such as conda<a href="#fn4" class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a> or uv<a href="#fn5" class="footnote-ref" id="fnref5" role="doc-noteref"><sup>5</sup></a> and keep track of your versions to save painful debugging time in the long run.</p>
+</section>
+</section>
+<section id="sec-key-concepts" class="level1">
+<h1>Key concepts and valuable resources to start your NLP journey</h1>
+<p>In this tutorial we will <strong>fine-tune</strong> a <strong>pretrained language model</strong> of type <strong>encoder</strong> to perform a <strong>classification</strong> task. The description itself needs clarification, we will endeavor to shed light on all of these keywords while remaining on the surface level to keep this tutorial legible. At each step, we provide valuable resources to further understand the concepts as well as the links to the litterature.</p>
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Warning
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Question : est-ce qu’on parle d’autres encodeurs que des BERT dans ce tytorial, si non : pourquoi ne pas se concentrer sur les BERT ?</p>
+<p>AM: Non, c’est vrai mais si on se concentre sur des BERTs des non-initiés risqueraient de ne pas faire le lien entre BERT et encodeurs. Je me dis si on définit largement les encodeurs c’est plus facile de dire : “nous on se concentre sur les BERTs qui est un type d’encodeur”. Opinion?</p>
+</div>
+</div>
+<section id="sec-classification-task" class="level2">
+<h2 class="anchored" data-anchor-id="sec-classification-task">The classification task</h2>
+<p>The classification task is a concept from Machine Learning, it refers to an algorithm that will use input data (= predictors) to assign a class / label to each input. <a href="scikit-learn.org/stable">Scikit-Learn</a><a href="#fn6" class="footnote-ref" id="fnref6" role="doc-noteref"><sup>6</sup></a> puts it this way: <em>Identifying which category an object belongs to.</em> In the context of annotation, the connection is fairly direct, each text input needs to be assigned a label, therefore it is a classification task.</p>
+<p>Classification is part of the <strong>supervised learning</strong> family in machine learning: this means that to be able to assign labels, the algorithm will first need to be <strong>fitted</strong> onto some <strong>training data</strong>, <em>in our case handmade annotations</em>. The fitting/training process consists of providing inputs and labels, so the algorithm can adapt to the task and <em>“learn”</em>. This means that social scientists will first need to annotate a small set of texts in order to train the classifier.</p>
+<p>Classifiers often have structuring parameters called <strong>hyperparameters</strong> that alter the algorithm and are not changed during training. These parameters must be set with great care in order to reach satisfying performance.</p>
+<div class="columns">
+<div class="column" style="width:70%;">
+<p>To evaluate classifiers we use <a href="https://scikit-learn.org/stable/modules/model_evaluation.html#which-scoring-function-should-i-use">normalised metrics</a> such as <a href="https://en.wikipedia.org/wiki/Precision_and_recall">Precision</a>, <a href="https://en.wikipedia.org/wiki/Precision_and_recall">Recall</a>, <a href="https://en.wikipedia.org/wiki/Accuracy_and_precision#In_binary_classification">Accuracy</a> and <a href="https://en.wikipedia.org/wiki/F-score#Definition">F1 score</a>. Depending on your research you may want to optimise one metric or another.</p>
+<ul>
+<li>Precision: <em>“out of all the elements predicted as class A, how many were indeed from class A?”</em>, this metric is rather conservative, optimising this score will limit the number of false positives.</li>
+<li>Recall: <em>“out of all the elements that should have been classified as A, how many were indeed classified as A?”</em>, this metric is XXX, optimising this score will limit the number of false negatives.</li>
+<li>Accuracy: <em>“across all classes, how many elements were classified correctly?”</em>, XXX critique of this metric JB?</li>
+<li>F1 score: this score is an harmonic mean of recall an precision.</li>
+</ul>
+</div><div class="column" style="width:30%;">
+<div id="fig-precision-recall" class="quarto-figure quarto-figure-center quarto-float anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-precision-recall-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="./assets/precision_recall.jpg" class="img-fluid figure-img" style="width:100.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-precision-recall-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;1: precision and recall
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>To correctly assess a model evaluation and prevent cherry-picking, we proceed to separate evaluations on distinct subsets of texts and annotations:</p>
+<ul>
+<li>The training set: these items will be shown to the algorithm to <em>learn</em>. Metrics on the train set will be boosted.</li>
+<li>The dev set: these items will be used to assess the performance of the algorithm on new data. This set is used to choose the hyperparameters. Metrics on the dev set are likely to be boosted due to the fact that the hyperparameters are chosen to optimise this score.</li>
+<li>The test set: these items will be used to assess the performance of the algorithm with the chosen hyperparameters on new data. Metrics on the test set are meant to be representative of algorithm’s performance on new data. Scientists are encouraged to communicate on metrics computed on the test set to prevent from cherry picking the performance metrics.</li>
+</ul>
+</section>
+<section id="models" class="level2">
+<h2 class="anchored" data-anchor-id="models">Models</h2>
+<p>The models used in this tutorial are neural networks. Their behaviour is entirely determined by a large set of adjustable quantities called <strong>parameters</strong> — also referred to as <strong>weights</strong> and <strong>biases</strong> — and <strong>training</strong> a model means adjusting these quantities until it produces the output you expect. For the purposes of this tutorial, this is all you need to know about their internals.</p>
+<div class="callout callout-style-default callout-note callout-titled" title="Learn more about neural networks">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-2-contents" aria-controls="callout-2" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Learn more about neural networks
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-2" class="callout-2-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<ul>
+<li><a href="https://www.youtube.com/playlist?list=PLZHQObOWTQDNU6R1_67000Dx_ZCJB-3pi">3Blue1Brown, <em>Neural networks</em></a>: a visual, intuition-first video series. A good entry point if you have no prior exposure to the topic.</li>
+<li><a href="http://neuralnetworksanddeeplearning.com/">Michael Nielsen, <em>Neural Networks and Deep Learning</em></a>: a free online book, self-contained and readable without an advanced mathematical background.</li>
+<li><a href="https://web.stanford.edu/~jurafsky/slp3/7.pdf">Jurafsky &amp; Martin, chapter 7: <em>Neural Networks</em></a>: the reference NLP textbook we cite throughout this tutorial, for readers who want the formal treatment.</li>
+</ul>
+</div>
+</div>
+</div>
+</section>
+<section id="sec-encoders" class="level2">
+<h2 class="anchored" data-anchor-id="sec-encoders">Encoders vs.&nbsp;decoders — why not just use ChatGPT?</h2>
+<p>Modern language models<a href="#fn7" class="footnote-ref" id="fnref7" role="doc-noteref"><sup>7</sup></a> come in two families, and they differ in what they produce and in how they learn your annotation categories:</p>
+<ul>
+<li><strong>Decoder models</strong> (GPT, Llama, Claude, the models behind ChatGPT and similar tools) produce text, so they are well suited to open-ended tasks such as conversation, drafting, summarising or translation. To annotate a corpus with a decoder, you have to instruct it every time through a prompt, and hope it interprets your instructions correctly. These models are very large, rarely runnable on a personal computer, and typically used through an API, as we did in the <a href="https://www.css.cnrs.fr/classification-with-generative-llms-and-api-calls/">previous tutorial</a>.</li>
+<li><strong>Encoder models</strong> (BERT and its relatives) produce no text at all, but an <strong>embedding</strong>: a numerical representation of a text’s meaning. This makes them well suited to tasks with a closed, well-defined output, such as classification, similarity ranking or clustering. Rather than being prompted, an encoder is <strong>fine-tuned</strong> on a few hundred texts you label yourself: it learns from your judgment calls, not from a description of them. Encoders are much smaller than decoders, and will most likely run on your own machine<a href="#fn8" class="footnote-ref" id="fnref8" role="doc-noteref"><sup>8</sup></a>.</li>
+</ul>
+<p>That upfront annotation effort, and a model that only ever performs this one task, is the price you pay for an encoder — but in exchange, you keep full control over it. This has concrete consequences for cost, confidentiality and reproducibility, which we discuss next.</p>
+<section id="sec-pros-cons" class="level3">
+<h3 class="anchored" data-anchor-id="sec-pros-cons">Pros and cons for social science research</h3>
+<ul>
+<li><strong>Coding skills</strong>: fine-tuning requires more code than an API call, which is both an opportunity to build skills and a cost in time. <a href="css.cnrs.fr/active-tigger">ActiveTigger</a> offers a code-free alternative for collaborative annotation and fine-tuning.</li>
+</ul>
+<!--TODO add logo-->
+<ul>
+<li><strong>Hardware and cost</strong>: fine-tuning needs a machine to run on, while API calls need a paid key; neither is equally accessible to everyone.</li>
+<li><strong>Confidentiality</strong>: sensitive corpora cannot be sent through an external API, so any model, generative or encoder, has to run on a trusted server instead. Encoders, being lighter on hardware, make that bar easier to clear.</li>
+<li><strong>Open weights, control and reproducibility</strong>: most generative models are “closed weights”, usable only through an API, while HuggingFace models, encoder or generative, are “open weights” and can be downloaded. Providers rarely disclose the data behind a closed model or its future changes, which limits interpretability and means performance can shift after an update (source). Since you own the encoder and its fine-tuning data, your results stay reproducible and easier to interpret (XXX additional techniques to probe the model???).</li>
+</ul>
+</section>
+<section id="how-encoders-represent-text" class="level3">
+<h3 class="anchored" data-anchor-id="how-encoders-represent-text">How encoders represent text</h3>
+<p>The rest of this tutorial deals with encoder models only (AM: or maybe embedding models ? JB what’s the difference?): texts close in meaning are given close embeddings, a proximity measured by the “similarity score” (usually the cosine distance).</p>
+<div id="fig-similarity" class="quarto-figure quarto-figure-center quarto-float anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-similarity-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="./assets/similarity.png" class="img-fluid figure-img" style="width:100.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-similarity-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;2: Similarity
+</figcaption>
+</figure>
+</div>
+<p>In <a href="#fig-similarity" class="quarto-xref">Figure&nbsp;2</a>, “apple” and “pear” score high in similarity — but in the context of Apple’s new product, “apple”’s embedding shifts and the score drops. Classification works the same way: for a “left/right” label, the embeddings should capture what sets left-wing texts apart from right-wing ones.</p>
+<p>Every encoder also has a <strong>maximum context window</strong>: the maximum<a href="#fn9" class="footnote-ref" id="fnref9" role="doc-noteref"><sup>9</sup></a> number of tokens<a href="#fn10" class="footnote-ref" id="fnref10" role="doc-noteref"><sup>10</sup></a> it can process at once — anything beyond is simply ignored. Older models had short windows (128 to 512 tokens), so long texts had to be split into sentences or paragraphs.</p>
+<p>BERT was released by Google in 2019; CamemBERT (French), RoBERTa and ModernBERT are later variants built on it. In this tutorial we’ll use <code>bert-base-uncased</code>.</p>
+</section>
+</section>
+<section id="pretrained-models-and-fine-tuning" class="level2">
+<h2 class="anchored" data-anchor-id="pretrained-models-and-fine-tuning">Pretrained Models and Fine-tuning</h2>
+<p><strong>Pretrained</strong> means the heavy work has already been done for you: specialised organisations with the required hardware and data have already trained these models to recognise language patterns, a process that can take from days to months (XXX source), and published the resulting weights on HuggingFace for you to download.</p>
+<p>Fine-tuning, by contrast, is quick: a few minutes, at most a few dozen on more limited hardware. It only nudges the weights and biases, by a much smaller amount than pretraining, turning the general-purpose model into a classifier for your own labels — one assessed with the same metrics (F1 score, …) and the same train, dev, test framework as any other classifier.</p>
+<div class="callout callout-style-default callout-note callout-titled" title="Learn more about the Transformer architecture, the embedding space and training encoders">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-3-contents" aria-controls="callout-3" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Learn more about the Transformer architecture, the embedding space and training encoders
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-3" class="callout-3-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<ul>
+<li><a href="https://jalammar.github.io/illustrated-transformer/">The illustrated transformer</a></li>
+<li><a href="https://www.youtube.com/watch?v=XSSTuhyAmnI">What are Transformer Neural Networks</a></li>
+<li><a href="https://web.stanford.edu/~jurafsky/slp3/8.pdf">Jurafsky’s chapter on Transformers</a></li>
+<li><a href="https://nlp.seas.harvard.edu/annotated-transformer/">Code your own transformer model</a></li>
+</ul>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="sec-essentials" class="level1 page-columns page-full">
+<h1>Fine-tuning pipeline: the essential</h1>
+<p>Let’s finally dive into the implementation of fine-tuning a pretrained language model of type encoder to perform a classification task!</p>
+<p>In this section we will see the fundamentals to fine-tuning encoders for a classification task. We will use a dataset introduced by Luo et al., (2020); they collected journal articles, from which they extracted sentences conveying an opinion regarding global warming. Finally, they annotated each opinion as “agreeing”, “neutral” or “disagreeing” with regard to the following statement “Climate chage/global warming is a serious concern”.</p>
+<p>The implementation follows a standard framework including the following steps:</p>
+<ul>
+<li>Load, clean and split your data: clean your texts off of noise and unwanted information and split your dataset into three subsets as described in <a href="#sec-classification-task" class="quarto-xref">Section&nbsp;2.1</a>.</li>
+<li>Choose a model from HuggingFace and load it on a personal computer.</li>
+<li>Finetune the model using the standard implementation</li>
+<li>Assess the model performance and update the hyperparameters</li>
+<li>Predict the labels of all items using the fine-tuned model</li>
+</ul>
+<section id="sec-preprocess" class="level2">
+<h2 class="anchored" data-anchor-id="sec-preprocess">Load and preprocess your data</h2>
+<p>Data is available on the <a href="https://github.com/yiweiluo/GWStance/tree/master">project’s GitHub repository</a>, we can download it from there using Pandas.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd </span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>url <span class="op">=</span> <span class="st">"https://raw.githubusercontent.com/yiweiluo/GWStance/refs/heads/master/3_stance_detection/1_MTurk/full_annotations.tsv"</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>df_raw <span class="op">=</span> pd.read_csv(url, sep <span class="op">=</span> <span class="st">"</span><span class="ch">\t</span><span class="st">"</span>) <span class="co"># Careful here, this document is a tsv (separator="\t" and not a csv, separator = ",")</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>df_raw.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<table class="table">
+<colgroup>
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+</colgroup>
+<thead>
+<tr class="header">
+<th></th>
+<th>MACE_pred</th>
+<th>av_rating</th>
+<th>sentence</th>
+<th>worker_0</th>
+<th>worker_1</th>
+<th>sent_id</th>
+<th>…</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0</td>
+<td>disagrees</td>
+<td>-1</td>
+<td>Global warming is a hoax.</td>
+<td>disagrees</td>
+<td>disagrees</td>
+<td>s0</td>
+<td>…</td>
+</tr>
+<tr class="even">
+<td>1</td>
+<td>neutral</td>
+<td>0.375</td>
+<td>Alarming levels of sea level rise are predicted to threaten Florida over the next decades.</td>
+<td>neutral</td>
+<td>neutral</td>
+<td>s1</td>
+<td>…</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td>agrees</td>
+<td>1</td>
+<td>Global warming is happening and it will be dangerous to human health and welfare.</td>
+<td>agrees</td>
+<td>agrees</td>
+<td>s3</td>
+<td>…</td>
+</tr>
+</tbody>
+</table>
+<p>We will first need to explore the dataset and get a graps of its content as well as possible biases.</p>
+<p>As a first step, let’s make a list of all the columns:</p>
+<ul>
+<li><code>sent_id</code>: the sentence id. It is not unique and represents something else, we will need to create a different ID.</li>
+<li><code>sentence</code>: the sentence to annotate.</li>
+<li><code>worker_#N</code> <span class="math inline">\(N\in [1,7]\)</span>: The team tasked MTurk workers to label the data for them. Each column concatenates the labels for a given worker.</li>
+<li><code>MACE_pred</code>: this is the final prediction. The team used the MACE framework to create a debiased label from the workers’ labels.</li>
+<li><code>av_rating</code>: The mean of all workers’ annotations for a given sentence (with disagree = 1, neutral = 0, agree = 1).</li>
+</ul>
+<p>Other columns include <code>disagree</code>, <code>agree</code> and <code>neutral</code> but they are empty. The <code>round</code> and <code>batch</code> columns are irrelevant for our experiment.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> df_raw.loc[:,[<span class="st">"sent_id"</span>, <span class="st">"sentence"</span>, <span class="st">"MACE_pred"</span>, <span class="st">"av_rating"</span>]]</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> df.rename(columns<span class="op">=</span>{<span class="st">"MACE_pred"</span> : <span class="st">"label_text"</span>}) <span class="co"># Rename MACE_pred for conveniency</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>df</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Let’s have a look at the number of elements per class:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>df.groupby([<span class="st">"label_text"</span>]).size()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>MACE_pred</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>agrees       871</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>disagrees    441</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>neutral      988</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>dtype: int64</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>We can see that there tends to be more “neutral” or “agrees” sentences. This means that “disagrees” sentences might be trickier to spot because there will be less elements to train on. <!-- TODO balance dataset --></p>
+<p>The preprocessing step is one of the most important step in the NLP pipeline, one needs to know what the corpus contains. We list a number of aspects you want to keep in mind when pre-processing your data:</p>
+<p><strong>Create a unique ID for each text</strong></p>
+<p>Creating an index for each text ensures that you will be able to aggregate the results. If your dataset does not contain an existing ID column, you can create one using the syntax of your choice. In our case, we will create an index that will look like this: <code>ID-0001</code>.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>df[<span class="st">"ID"</span>] <span class="op">=</span> [<span class="ss">f'ID-</span><span class="sc">{</span>i<span class="sc">:04}</span><span class="ss">'</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="bu">len</span>(df))]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p><strong>The length of your documents</strong></p>
+<p>Assessing the length of your documents is crucial for two reasons:</p>
+<ul>
+<li>Firstly, as mentionned in <a href="#sec-encoders" class="quarto-xref">Section&nbsp;2.3</a>, we must check that the length of the documents are compatible with the chosen model’s context window size <a href="#fn11" class="footnote-ref" id="fnref11" role="doc-noteref"><sup>11</sup></a>. Also you will need to answer this question: “Where is the information that you’re looking for?”. For some tasks, you might want to work at the sentence level because you want to find specific elements of your corpus. For other tasks, working at the document or paragraph level is acceptable because you want to assess a global quantity</li>
+<li>Secondly, we need to make sure that models have roughly the same size to spot obvious issues (empty texts for instance) and ensure that we are not comparing documents of 5 words with 2 pages long documents.</li>
+</ul>
+<p>Let’s analyse the len of sentences :</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>df[<span class="st">"sentence-len"</span>] <span class="op">=</span> df[<span class="st">"sentence"</span>].<span class="bu">apply</span>(<span class="bu">len</span>)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>df[<span class="st">"sentence-len"</span>].hist()</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>df[<span class="st">"sentence-len"</span>].describe()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>count    2300.000000</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>mean      109.890435</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>std        56.251317</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>min        21.000000</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>25%        70.000000</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>50%       100.000000</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>75%       145.000000</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>max       347.000000</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>Name: sentence-len, dtype: float64</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="fig-sentence-length-hist" class="quarto-figure quarto-figure-center quarto-float anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-sentence-length-hist-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="./assets/sentence-length.png" class="img-fluid figure-img" style="width:50.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-sentence-length-hist-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;3: Sentence length
+</figcaption>
+</figure>
+</div>
+<p>In the context of our experiment, the sentences are quite short and their size is roughly standard. We will not exclude text inputs based on their length. Keep in mind that this model will be trained on a specific task and specific material. Performances are not guaranteed for texts too different in tone, source, date, or length from the training data.</p>
+<p><strong>Are there any unwanted characters</strong></p>
+<p>If you are used to <a href="XXX">TF-IDF techniques</a>, you might be accoustumed to filtering punctuations and stop words. This is not something that we want to do when using transformers models. Indeed these models are trained with these characters and they convey meaningful context to the model. However, you might want to filter out elements that, for your study, do not carry semantic value. For instance, when working on social media content, depending on your analysis, you will want to either keep or remove emojis for instance<a href="#fn12" class="footnote-ref" id="fnref12" role="doc-noteref"><sup>12</sup></a>. At the end of the day, you want to make sure that the elements you keep in your text carry semantic information useful for annotating.</p>
+<p>Our corpus is relatively clean given that the preprocessing stage happened at an earlier stage of the study. Skimming through the text entries, we can still find some irregularities regarding the punctuation. Let’s fix these:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> preprocess_text(text: <span class="bu">str</span>):</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span>(<span class="bu">isinstance</span>(text, <span class="bu">str</span>)):</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> pd.NA</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> (</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>        text</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>        .replace(<span class="st">"``"</span>, <span class="st">'"'</span>)</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>        .replace(<span class="st">"''"</span>, <span class="st">'"'</span>)</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>        .replace(<span class="st">" ,"</span>, <span class="st">","</span>)</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>        .replace(<span class="st">" ."</span>, <span class="st">"."</span>)</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>        .replace(<span class="st">" !"</span>, <span class="st">"!"</span>)</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>        .replace(<span class="st">" ?"</span>, <span class="st">"?"</span>)</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>        .replace(<span class="st">" :"</span>, <span class="st">":"</span>)</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>        .replace(<span class="st">" 's"</span>, <span class="st">"'s"</span>)</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>df[<span class="st">"sentence-preprocessed"</span>] <span class="op">=</span> df[<span class="st">"sentence"</span>].<span class="bu">apply</span>(preprocess_text)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p><strong>Are there any duplicates?</strong></p>
+<p>This can be a fatal flaw as training a model with repeated elements can outweight other annotation or completely confuse it. Let’s see if we have duplicates:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>df.groupby(<span class="st">"sentence"</span>).size().value_counts()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb11"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>1     2034</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>2        8</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>50       5</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>Name: count, dtype: int64</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>We can see that 5 elements are duplicated 50 times. Further investigations let us identify that sentences with indices starting with an “s” (<code>['s0', 's1', 's2', 's3', 's4']</code>) are duplicated 50 times. Let’s remove these rows.</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>df_no_duplicates <span class="op">=</span> df.loc[<span class="op">~</span>df[<span class="st">"sent_id"</span>].<span class="bu">str</span>.startswith(<span class="st">"s"</span>), :] </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>We still need to deal with the 8 elements that have a duplicate. For conciseness’ sake we document this step in the <a href="./appendices.html#sec-duplicates">appendices of this tutorial</a>. You can run the lines yourself of load the checkpoint:</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>df_clean <span class="op">=</span> pd.read_csv(<span class="st">"./data/dataset-no-duplicates.csv"</span>)</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>df_clean</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<table class="table">
+<colgroup>
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+</colgroup>
+<thead>
+<tr class="header">
+<th></th>
+<th>sent_id</th>
+<th>sentence</th>
+<th>label_text</th>
+<th>av_rating</th>
+<th>ID</th>
+<th>sentence-len</th>
+<th>sentence-preprocessed</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0</td>
+<td>t0</td>
+<td>Warmer-than-normal s…</td>
+<td>agrees</td>
+<td>0.625</td>
+<td>ID-0005</td>
+<td>170</td>
+<td>Warmer-than-normal s…</td>
+</tr>
+<tr class="even">
+<td>1</td>
+<td>t1</td>
+<td>We will continue to …</td>
+<td>neutral</td>
+<td>0</td>
+<td>ID-0006</td>
+<td>94</td>
+<td>We will continue to …</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td>t11</td>
+<td>Claims of global war…</td>
+<td>disagrees</td>
+<td>-1</td>
+<td>ID-0008</td>
+<td>55</td>
+<td>Claims of global war…</td>
+</tr>
+</tbody>
+</table>
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Warning
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>[ES: C’est vraiment la règle à suivre ? On garde des éléments identiques avec des annotations discordantes ? Question de curiosité; AM: Il vaut mieux éviter les doublons oui, sinon tu créé du bruit ou tu suraligne avec une phrase. Je pense que c’est pas critique mais je trouvais ça important de s’y arrêter. Opinions?]</p>
+</div>
+</div>
+<p><strong>Summary and the key ideas behind these preprocessing steps</strong></p>
+<p>We have listed a limited number of preprocessings that you can perform. The first key idea behind these is to ensure that your documents will be read by the model and that the information will not be diluted in noise. To further ensure this, please refer to the model’s documentation.</p>
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Warning
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>AM: I want to introduce the idea of bias, but i’m not sure it’s the right time / right way. Opinions ?</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>df[<span class="st">"sentence-len"</span>] <span class="op">=</span> df[<span class="st">"sentence"</span>].<span class="bu">apply</span>(<span class="bu">len</span>)</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>df.hist(column <span class="op">=</span> <span class="st">"sentence-len"</span>, by<span class="op">=</span><span class="st">"label_text"</span>)</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>df.groupby(<span class="st">"label_text"</span>)[<span class="st">"sentence-len"</span>].describe()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<table class="table">
+<colgroup>
+<col style="width: 18%">
+<col style="width: 11%">
+<col style="width: 12%">
+<col style="width: 11%">
+<col style="width: 9%">
+<col style="width: 9%">
+<col style="width: 9%">
+<col style="width: 9%">
+<col style="width: 9%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">label_text</th>
+<th style="text-align: right;">count</th>
+<th style="text-align: right;">mean</th>
+<th style="text-align: right;">std</th>
+<th style="text-align: right;">min</th>
+<th style="text-align: right;">25%</th>
+<th style="text-align: right;">50%</th>
+<th style="text-align: right;">75%</th>
+<th style="text-align: right;">max</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">agrees</td>
+<td style="text-align: right;">871</td>
+<td style="text-align: right;">114.91</td>
+<td style="text-align: right;">56.0082</td>
+<td style="text-align: right;">22</td>
+<td style="text-align: right;">77</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">148</td>
+<td style="text-align: right;">342</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">disagrees</td>
+<td style="text-align: right;">441</td>
+<td style="text-align: right;">98.0907</td>
+<td style="text-align: right;">59.0937</td>
+<td style="text-align: right;">22</td>
+<td style="text-align: right;">51</td>
+<td style="text-align: right;">86</td>
+<td style="text-align: right;">134</td>
+<td style="text-align: right;">325</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">neutral</td>
+<td style="text-align: right;">988</td>
+<td style="text-align: right;">110.732</td>
+<td style="text-align: right;">54.4368</td>
+<td style="text-align: right;">21</td>
+<td style="text-align: right;">72</td>
+<td style="text-align: right;">104</td>
+<td style="text-align: right;">148</td>
+<td style="text-align: right;">347</td>
+</tr>
+</tbody>
+</table>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="./assets/len-label.png" class="img-fluid figure-img"></p>
+<figcaption>Length of text per label</figcaption>
+</figure>
+</div>
+<p>We can see that sentences are short, with similar length distributions across the “agrees” annotated items and “neutral” annotated items. On the other hand, “disagrees” annotated items seem to be shorter on average. This can be problematic if the gap is too large because you want to preserve some coherence between the texts. Also, automatic annotation algorithms exploit significant differences between items; at this point we do not know if the length if the texts is a difference to exploit or normalise.</p>
+</div>
+</div>
+<p>Another key idea is to ensure sufficient homogeneity. Indeed, to perform the classification, an algorithm will exploit the differences between the texts with different labels. If texts of a certain class are longer than others, the algorithm might use this information to tell the difference. Depending on your research question, this might be a good thing or not.</p>
+<p><strong>Final step: Create splits</strong></p>
+<p>As described in <a href="#sec-classification-task" class="quarto-xref">Section&nbsp;2.1</a>, we need to split the availables annotations into three sets: train, dev and test. In general, we allocate 70% of the data to the train set, then 15% to dev set and test eval set. Depending on the size of your dataset, you might want to tweak this distribution. Ultimately, you want enough data for training and evaluation for scores to be significative.</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> datasets <span class="im">import</span> Dataset, DatasetDict</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>ds <span class="op">=</span> Dataset.from_pandas(df_no_duplicates)</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>temp <span class="op">=</span> ds.train_test_split(test_size <span class="op">=</span> <span class="fl">0.3</span>, shuffle<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>ds_train <span class="op">=</span> temp[<span class="st">"train"</span>]</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>temp <span class="op">=</span> temp[<span class="st">"test"</span>].train_test_split(test_size <span class="op">=</span> <span class="fl">0.5</span>, shuffle <span class="op">=</span> <span class="va">True</span>)</span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>ds_dev <span class="op">=</span> temp[<span class="st">"train"</span>]</span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>ds_test <span class="op">=</span> temp[<span class="st">"test"</span>]</span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>dsd <span class="op">=</span> DatasetDict({</span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>  <span class="st">"train"</span>: ds_train,</span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>  <span class="st">"dev"</span>: ds_dev,</span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>  <span class="st">"test"</span>: ds_test</span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a>})</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<pre><code>DatasetDict({
+    train: Dataset({
+        features: ['sent_id', 'sentence', 'label_text', 'av_rating', 'ID', 'sentence-len', 
+        'sentence-preprocessed', '__index_level_0__'],
+        num_rows: 1428
+    })
+    dev: Dataset({
+        features: ['sent_id', 'sentence', 'label_text', 'av_rating', 'ID', 'sentence-len', 
+        'sentence-preprocessed', '__index_level_0__'],
+        num_rows: 306
+    })
+    test: Dataset({
+        features: ['sent_id', 'sentence', 'label_text', 'av_rating', 'ID', 'sentence-len', 
+        'sentence-preprocessed', '__index_level_0__'],
+        num_rows: 307
+    })
+})</code></pre>
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Warning
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>[ES: la terminologie est différente de ActiveTigger, sur quoi on se base pour ne pas avoir eval / test ? JE pense que ça doit être cohérent entre nos outils et nos leçons non ? AM: Je suis d’accord. Cependant la terminologie a souvent été confuse pour certaines personnes. Est ce que ça vaudrait pas le coup de réfléchir à une terminologie claire et mettre à jour ce tuto ET AT?]</p>
+</div>
+</div>
+</section>
+<section id="choose-and-load-a-model" class="level2">
+<h2 class="anchored" data-anchor-id="choose-and-load-a-model">Choose and load a model</h2>
+<p>In this tutorial we use the Transformers package, maintained by <a href="https://huggingface.co/">HuggingFace</a><a href="#fn13" class="footnote-ref" id="fnref13" role="doc-noteref"><sup>13</sup></a>. They propose a range of open source models and datasets downlable through their API. In the context of this tutorial, we will start working with the famous BERT model named: <a href="https://huggingface.co/google-bert/bert-base-uncased">google-bert/bert-base-uncased</a></p>
+<div class="callout callout-style-default callout-note callout-titled" title="How to choose a model">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-7-contents" aria-controls="callout-7" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+How to choose a model
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-7" class="callout-7-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>Models and their performance are highly sensitive to the task and context of use. When implementing an NLP task you might want to try several models to compare their performance. When choosing a model you want to take into account the following parameters:</p>
+<ul>
+<li>What task was the model trained for? You can see the list of tasks when <a href="https://huggingface.co/models">browsing HuggingFace’s models</a>. In the context of this tutorial, we want to perform a <strong>Text Classification</strong> task.</li>
+<li>What language was the model trained on? This one is trivial. However, depending on your corpus, you might want to find models that are multilingual. Performance of multilingual models can be below monolingual models; consider trying different models (is it still true ?? @ Léo). You can also try and translate your corpus into one language and use a monolingual model.</li>
+<li>What documents was the model trained on? Evaluated on? Models performance can vary a lot when used on a certain domain or another. Make sure to use models that have been XXX BENCSSMARK @ Etienne @ Paul</li>
+<li>Is the model still relevant? Look at the number of downloads on the model’s page; this can give you a sense of the model’s popularity and (to some extent) performance. If downloads have dropped, this can be a sign that a newer version was published or that another model has become the new standard.</li>
+<li>Last but not least: How big is the model? You won’t get away with it, your laptop has limited computation capabilities, large models need appropriate hardware. Know your hardware and check what model you can run <a href="XXX">using this method</a>. <!-- TODO find a method lols --></li>
+</ul>
+</div>
+</div>
+</div>
+<p>To load the model we just need to use one of the AutoModel instance<a href="#fn14" class="footnote-ref" id="fnref14" role="doc-noteref"><sup>14</sup></a>. In our case we are going to use the <a href="https://huggingface.co/docs/transformers/en/model_doc/auto#transformers.AutoModelForSequenceClassification"><code>AutoModelForSequenceClassification</code></a>. To load the model we use the following command:</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> transformers <span class="im">import</span> AutoModelForSequenceClassification</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>labels <span class="op">=</span> <span class="bu">list</span>(df[<span class="st">"label_text"</span>].unique())</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>num_labels <span class="op">=</span> <span class="bu">len</span>(labels)</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>id2label <span class="op">=</span> {<span class="bu">id</span>:label <span class="cf">for</span> <span class="bu">id</span>, label <span class="kw">in</span> <span class="bu">enumerate</span>(labels)}</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>label2id <span class="op">=</span> {label:<span class="bu">id</span>  <span class="cf">for</span> <span class="bu">id</span>, label <span class="kw">in</span> <span class="bu">enumerate</span>(labels)}</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>MODEL_NAME <span class="op">=</span> <span class="st">"google-bert/bert-base-uncased"</span></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> AutoModelForSequenceClassification.from_pretrained(</span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>    MODEL_NAME,</span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>    num_labels<span class="op">=</span>num_labels,</span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>    id2label<span class="op">=</span>id2label,</span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>    label2id<span class="op">=</span>label2id,</span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Warning
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Nota: for some models you might need to set <code>trust_remote_code</code> to <code>True</code>. <em>Make sure you actually trust the model you are downloading.</em></p>
+</div>
+</div>
+<div id="nte-model-description" class="callout callout-style-default callout-note callout-titled" title="Model description">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-9-contents" aria-controls="callout-9" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note&nbsp;1: Model description
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-9" class="callout-9-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>We can easily observe the general architecture of the model by typing:</p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(model)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb19"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>BertForSequenceClassification(</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  (bert): BertModel(</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>    &gt;&gt;&gt; This is the first step of the encoding process, use ready made embeddings </span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>    that will be modified with attention. We can find useful information: </span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>    - 30522 is the vocab size, there are 30522 entities for which there is a ready </span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>    made embedding.</span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>    - 768 is the dimension of the output embeddings</span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>    (embeddings): BertEmbeddings(</span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>      (word_embeddings): Embedding(30522, 768, padding_idx=0)</span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>      (position_embeddings): Embedding(512, 768)</span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>      (token_type_embeddings): Embedding(2, 768)</span>
+<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>      (LayerNorm): LayerNorm((768,), eps=1e-12, elementwise_affine=True)</span>
+<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a>      (dropout): Dropout(p=0.1, inplace=False)</span>
+<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb19-17"><a href="#cb19-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-18"><a href="#cb19-18" aria-hidden="true" tabindex="-1"></a>    &gt;&gt;&gt; This is where the attention takes place. You can see that the encoder is a</span>
+<span id="cb19-19"><a href="#cb19-19" aria-hidden="true" tabindex="-1"></a>    stack of 12 BERTlayers, themselves containing a self attention module. We find </span>
+<span id="cb19-20"><a href="#cb19-20" aria-hidden="true" tabindex="-1"></a>    again the dimension of the output embeddings: 768</span>
+<span id="cb19-21"><a href="#cb19-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-22"><a href="#cb19-22" aria-hidden="true" tabindex="-1"></a>    (encoder): BertEncoder(</span>
+<span id="cb19-23"><a href="#cb19-23" aria-hidden="true" tabindex="-1"></a>      (layer): ModuleList(</span>
+<span id="cb19-24"><a href="#cb19-24" aria-hidden="true" tabindex="-1"></a>        (0-11): 12 x BertLayer(</span>
+<span id="cb19-25"><a href="#cb19-25" aria-hidden="true" tabindex="-1"></a>          (attention): BertAttention(</span>
+<span id="cb19-26"><a href="#cb19-26" aria-hidden="true" tabindex="-1"></a>            (self): BertSdpaSelfAttention(</span>
+<span id="cb19-27"><a href="#cb19-27" aria-hidden="true" tabindex="-1"></a>              (query): Linear(in_features=768, out_features=768, bias=True)</span>
+<span id="cb19-28"><a href="#cb19-28" aria-hidden="true" tabindex="-1"></a>              (key): Linear(in_features=768, out_features=768, bias=True)</span>
+<span id="cb19-29"><a href="#cb19-29" aria-hidden="true" tabindex="-1"></a>              (value): Linear(in_features=768, out_features=768, bias=True)</span>
+<span id="cb19-30"><a href="#cb19-30" aria-hidden="true" tabindex="-1"></a>              (dropout): Dropout(p=0.1, inplace=False)</span>
+<span id="cb19-31"><a href="#cb19-31" aria-hidden="true" tabindex="-1"></a>            )</span>
+<span id="cb19-32"><a href="#cb19-32" aria-hidden="true" tabindex="-1"></a>            (output): BertSelfOutput(</span>
+<span id="cb19-33"><a href="#cb19-33" aria-hidden="true" tabindex="-1"></a>              (dense): Linear(in_features=768, out_features=768, bias=True)</span>
+<span id="cb19-34"><a href="#cb19-34" aria-hidden="true" tabindex="-1"></a>              (LayerNorm): LayerNorm((768,), eps=1e-12, elementwise_affine=True)</span>
+<span id="cb19-35"><a href="#cb19-35" aria-hidden="true" tabindex="-1"></a>              (dropout): Dropout(p=0.1, inplace=False)</span>
+<span id="cb19-36"><a href="#cb19-36" aria-hidden="true" tabindex="-1"></a>            )</span>
+<span id="cb19-37"><a href="#cb19-37" aria-hidden="true" tabindex="-1"></a>          )</span>
+<span id="cb19-38"><a href="#cb19-38" aria-hidden="true" tabindex="-1"></a>          (intermediate): BertIntermediate(</span>
+<span id="cb19-39"><a href="#cb19-39" aria-hidden="true" tabindex="-1"></a>            (dense): Linear(in_features=768, out_features=3072, bias=True)</span>
+<span id="cb19-40"><a href="#cb19-40" aria-hidden="true" tabindex="-1"></a>            (intermediate_act_fn): GELUActivation()</span>
+<span id="cb19-41"><a href="#cb19-41" aria-hidden="true" tabindex="-1"></a>          )</span>
+<span id="cb19-42"><a href="#cb19-42" aria-hidden="true" tabindex="-1"></a>          (output): BertOutput(</span>
+<span id="cb19-43"><a href="#cb19-43" aria-hidden="true" tabindex="-1"></a>            (dense): Linear(in_features=3072, out_features=768, bias=True)</span>
+<span id="cb19-44"><a href="#cb19-44" aria-hidden="true" tabindex="-1"></a>            (LayerNorm): LayerNorm((768,), eps=1e-12, elementwise_affine=True)</span>
+<span id="cb19-45"><a href="#cb19-45" aria-hidden="true" tabindex="-1"></a>            (dropout): Dropout(p=0.1, inplace=False)</span>
+<span id="cb19-46"><a href="#cb19-46" aria-hidden="true" tabindex="-1"></a>          )</span>
+<span id="cb19-47"><a href="#cb19-47" aria-hidden="true" tabindex="-1"></a>        )</span>
+<span id="cb19-48"><a href="#cb19-48" aria-hidden="true" tabindex="-1"></a>      )</span>
+<span id="cb19-49"><a href="#cb19-49" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb19-50"><a href="#cb19-50" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-51"><a href="#cb19-51" aria-hidden="true" tabindex="-1"></a>    &gt;&gt;&gt; This pooler is the component that will take the embedding of each token in </span>
+<span id="cb19-52"><a href="#cb19-52" aria-hidden="true" tabindex="-1"></a>    the sequence and produce a unique embedding, supposedly best representing the sequene.</span>
+<span id="cb19-53"><a href="#cb19-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-54"><a href="#cb19-54" aria-hidden="true" tabindex="-1"></a>    (pooler): BertPooler(</span>
+<span id="cb19-55"><a href="#cb19-55" aria-hidden="true" tabindex="-1"></a>      (dense): Linear(in_features=768, out_features=768, bias=True)</span>
+<span id="cb19-56"><a href="#cb19-56" aria-hidden="true" tabindex="-1"></a>      (activation): Tanh()</span>
+<span id="cb19-57"><a href="#cb19-57" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb19-58"><a href="#cb19-58" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb19-59"><a href="#cb19-59" aria-hidden="true" tabindex="-1"></a>  (dropout): Dropout(p=0.1, inplace=False)</span>
+<span id="cb19-60"><a href="#cb19-60" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-61"><a href="#cb19-61" aria-hidden="true" tabindex="-1"></a>  &gt;&gt;&gt; This last component is the classifier layer, a neural network composed of 768 </span>
+<span id="cb19-62"><a href="#cb19-62" aria-hidden="true" tabindex="-1"></a>  + 3 nodes. The out_features=3 corresponds to the number of labels we are using for </span>
+<span id="cb19-63"><a href="#cb19-63" aria-hidden="true" tabindex="-1"></a>  annotation! </span>
+<span id="cb19-64"><a href="#cb19-64" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-65"><a href="#cb19-65" aria-hidden="true" tabindex="-1"></a>  (classifier): Linear(in_features=768, out_features=3, bias=True)</span>
+<span id="cb19-66"><a href="#cb19-66" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Tips and tricks - Read the model configuration">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-10-contents" aria-controls="callout-10" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Tips and tricks - Read the model configuration
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-10" class="callout-10-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>The <code>AutoConfig</code> class is very convenient for retrieveing information that may be difficult to obtain otherwise because models’ documentation sometimes lack precision. We load it like this:</p>
+<div class="sourceCode" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> transformers <span class="im">import</span> AutoConfig</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(AutoConfig.from_pretrained(MODEL_NAME))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb21"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>BertConfig {</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  "architectures": [</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>    "BertForMaskedLM"</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>  ],</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>  "attention_probs_dropout_prob": 0.1,</span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>  "classifier_dropout": null,</span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>  "gradient_checkpointing": false,</span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>  "hidden_act": "gelu",</span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>  "hidden_dropout_prob": 0.1,</span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>  &gt;&gt;&gt; Embedding dimension </span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>  "hidden_size": 768,</span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a>  "initializer_range": 0.02,</span>
+<span id="cb21-15"><a href="#cb21-15" aria-hidden="true" tabindex="-1"></a>  "intermediate_size": 3072,</span>
+<span id="cb21-16"><a href="#cb21-16" aria-hidden="true" tabindex="-1"></a>  "layer_norm_eps": 1e-12,</span>
+<span id="cb21-17"><a href="#cb21-17" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb21-18"><a href="#cb21-18" aria-hidden="true" tabindex="-1"></a>  &gt;&gt;&gt; Maximum context window</span>
+<span id="cb21-19"><a href="#cb21-19" aria-hidden="true" tabindex="-1"></a>  "max_position_embeddings": 512,</span>
+<span id="cb21-20"><a href="#cb21-20" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb21-21"><a href="#cb21-21" aria-hidden="true" tabindex="-1"></a>  "model_type": "bert",</span>
+<span id="cb21-22"><a href="#cb21-22" aria-hidden="true" tabindex="-1"></a>  "num_attention_heads": 12,</span>
+<span id="cb21-23"><a href="#cb21-23" aria-hidden="true" tabindex="-1"></a>  "num_hidden_layers": 12,</span>
+<span id="cb21-24"><a href="#cb21-24" aria-hidden="true" tabindex="-1"></a>  "pad_token_id": 0,</span>
+<span id="cb21-25"><a href="#cb21-25" aria-hidden="true" tabindex="-1"></a>  "position_embedding_type": "absolute",</span>
+<span id="cb21-26"><a href="#cb21-26" aria-hidden="true" tabindex="-1"></a>  "transformers_version": "4.52.4",</span>
+<span id="cb21-27"><a href="#cb21-27" aria-hidden="true" tabindex="-1"></a>  "type_vocab_size": 2,</span>
+<span id="cb21-28"><a href="#cb21-28" aria-hidden="true" tabindex="-1"></a>  "use_cache": true,</span>
+<span id="cb21-29"><a href="#cb21-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-30"><a href="#cb21-30" aria-hidden="true" tabindex="-1"></a>  &gt;&gt;&gt; Vocab size identified earlier</span>
+<span id="cb21-31"><a href="#cb21-31" aria-hidden="true" tabindex="-1"></a>  "vocab_size": 30522</span>
+<span id="cb21-32"><a href="#cb21-32" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="fine-tune-the-model" class="level2">
+<h2 class="anchored" data-anchor-id="fine-tune-the-model">Fine-tune the model</h2>
+<p>We are finally going to fine-tune the model on our specific data. To do so, we are going to proceed with the 3 following steps:</p>
+<ul>
+<li>Tokenize the dataset</li>
+<li>Setup the training arguments</li>
+<li>Launch training</li>
+</ul>
+<section id="sec-tokenization" class="level3">
+<h3 class="anchored" data-anchor-id="sec-tokenization">Tokenize the dataset</h3>
+<p>Tokenizing consists of two steps, first text patterns are transformed into tokens from the model’s vocabulary, then each sentence is truncated or padded so that every entry has the same length.</p>
+<div class="callout callout-style-default callout-tip callout-titled" title="Example">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-11-contents" aria-controls="callout-11" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Example
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-11" class="callout-11-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<div class="sourceCode" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>tokenizer(<span class="st">"Hello World! 😇"</span>)</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a><span class="co"># {'input_ids': [101, 7592, ...], 'token_type_ids': [0, 0, ...], 'attention_mask': [1, 1, ...]}</span></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>tokenizer(<span class="st">"Hello World! 😇"</span>).input_ids</span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a><span class="co"># [101, 7592, 2088, 999, 102] &lt;- the token id</span></span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>tokenizer.decode([<span class="dv">101</span>, <span class="dv">7592</span>, <span class="dv">2088</span>, <span class="dv">999</span>, <span class="dv">100</span>, <span class="dv">102</span>])</span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a><span class="co"># '[CLS] hello world! [UNK] [SEP]' </span></span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a><span class="co"># [CLS] is the starting token and [SEP] the terminating one.</span></span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a><span class="co"># The smiley is marked as unknown [UNK]</span></span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>tokenizer.decode([<span class="dv">101</span>])</span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a><span class="co"># '[CLS]' &lt;- token number 101 </span></span>
+<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a>tokenizer.decode([<span class="dv">2088</span>, <span class="dv">999</span>])</span>
+<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a><span class="co"># 'world!' &lt;- tokens number 2088 and 999</span></span>
+<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a>tokenizer(</span>
+<span id="cb22-14"><a href="#cb22-14" aria-hidden="true" tabindex="-1"></a>  [lorem.get_sentence(count<span class="op">=</span><span class="dv">20</span>), <span class="co"># Very long</span></span>
+<span id="cb22-15"><a href="#cb22-15" aria-hidden="true" tabindex="-1"></a>   lorem.get_sentence(count<span class="op">=</span><span class="dv">2</span>)]  <span class="co"># Very short</span></span>
+<span id="cb22-16"><a href="#cb22-16" aria-hidden="true" tabindex="-1"></a>  truncation <span class="op">=</span> <span class="va">True</span>, </span>
+<span id="cb22-17"><a href="#cb22-17" aria-hidden="true" tabindex="-1"></a>  padding <span class="op">=</span> <span class="st">"max_length"</span>, </span>
+<span id="cb22-18"><a href="#cb22-18" aria-hidden="true" tabindex="-1"></a>  max_length <span class="op">=</span> <span class="dv">50</span>, </span>
+<span id="cb22-19"><a href="#cb22-19" aria-hidden="true" tabindex="-1"></a>  return_tensors <span class="op">=</span> <span class="st">"np"</span></span>
+<span id="cb22-20"><a href="#cb22-20" aria-hidden="true" tabindex="-1"></a>).input_ids.shape</span>
+<span id="cb22-21"><a href="#cb22-21" aria-hidden="true" tabindex="-1"></a><span class="co"># (2, 50) &lt;- long entries are truncated and short ones are padded so that all tokenized entries are the same length</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</div>
+</div>
+<p>The tokenizer<a href="#fn15" class="footnote-ref" id="fnref15" role="doc-noteref"><sup>15</sup></a> needs to be loaded just as we did with the model:</p>
+<div class="sourceCode" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> transformers <span class="im">import</span> AutoTokenizer</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>tokenizer <span class="op">=</span> AutoTokenizer.from_pretrained(MODEL_NAME)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Then choosing the parameters for the tokenizer and writing a preprocessing function:</p>
+<div class="sourceCode" id="cb24"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> preprocess_dataset(row: <span class="bu">dict</span>):</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  tokenized_entry <span class="op">=</span> tokenizer(</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>    row[<span class="st">"sentence-preprocessed"</span>],</span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>    truncation <span class="op">=</span> <span class="va">True</span>, </span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>    padding <span class="op">=</span> <span class="st">"max_length"</span>,</span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>    max_length <span class="op">=</span> <span class="dv">400</span>,</span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> {</span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>      <span class="op">**</span>row.copy(),</span>
+<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a>      <span class="st">"labels"</span>: <span class="bu">int</span>(label2id[row[<span class="st">"label_text"</span>]]),</span>
+<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a>      <span class="op">**</span>tokenized_entry</span>
+<span id="cb24-12"><a href="#cb24-12" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb24-13"><a href="#cb24-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-14"><a href="#cb24-14" aria-hidden="true" tabindex="-1"></a>dsd <span class="op">=</span> dsd.<span class="bu">map</span>(preprocess_dataset)</span>
+<span id="cb24-15"><a href="#cb24-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Only keep columns useful for training</span></span>
+<span id="cb24-16"><a href="#cb24-16" aria-hidden="true" tabindex="-1"></a>dsd <span class="op">=</span> dsd.select_columns([<span class="st">'ID'</span>, <span class="st">'labels'</span>, <span class="st">'input_ids'</span>, <span class="st">'token_type_ids'</span>, <span class="st">'attention_mask'</span>])</span>
+<span id="cb24-17"><a href="#cb24-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Set the dataset dict format to torch</span></span>
+<span id="cb24-18"><a href="#cb24-18" aria-hidden="true" tabindex="-1"></a>dsd <span class="op">=</span> dsd.with_format(<span class="st">"torch"</span>)</span>
+<span id="cb24-19"><a href="#cb24-19" aria-hidden="true" tabindex="-1"></a>dsd</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<pre><code>DatasetDict({
+    train: Dataset({
+        features: ['ID', 'labels', 'input_ids', 'token_type_ids', 'attention_mask'],
+        num_rows: 1428
+    })
+    dev: Dataset({
+        features: ['ID', 'labels', 'input_ids', 'token_type_ids', 'attention_mask'],
+        num_rows: 306
+    })
+    test: Dataset({
+        features: ['ID', 'labels', 'input_ids', 'token_type_ids', 'attention_mask'],
+        num_rows: 307
+    })
+})</code></pre>
+<p>The data is ready to be used for Fine-Tuning!</p>
+</section>
+<section id="sec-training-parameters" class="level3">
+<h3 class="anchored" data-anchor-id="sec-training-parameters">Setup fine-tuning hyperparameters</h3>
+<p>The fine-tuning parameters are stored in the <code>TrainingArguments</code><a href="#fn16" class="footnote-ref" id="fnref16" role="doc-noteref"><sup>16</sup></a> object. We have selected the main parameters that you’ll want to look for during training, but you can browse the <a href="https://huggingface.co/docs/transformers/v4.49.0/en/main_classes/trainer#transformers.TrainingArguments">117 parameters it can take</a>. You’ll find more information about what hyperparameters represent and how to tune them in <a href="#sec-hyperparameters-tuning" class="quarto-xref">Section&nbsp;4.1</a>.</p>
+<div class="sourceCode" id="cb26"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> transformers <span class="im">import</span> TrainingArguments, Trainer</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>training_arguments <span class="op">=</span> TrainingArguments(</span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Hyperparameters</span></span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>    num_train_epochs <span class="op">=</span> <span class="dv">5</span>,</span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>    learning_rate <span class="op">=</span> <span class="fl">5e-5</span>,</span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>    weight_decay  <span class="op">=</span> <span class="fl">0.0</span>,</span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a>    optim <span class="op">=</span> <span class="st">"adamw_torch_fused"</span>,</span>
+<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Second order hyperparameters</span></span>
+<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a>    per_device_train_batch_size <span class="op">=</span> <span class="dv">4</span>,</span>
+<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a>    per_device_eval_batch_size <span class="op">=</span> <span class="dv">4</span>,</span>
+<span id="cb26-11"><a href="#cb26-11" aria-hidden="true" tabindex="-1"></a>    gradient_accumulation_steps <span class="op">=</span> <span class="dv">8</span>,</span>
+<span id="cb26-12"><a href="#cb26-12" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Metrics</span></span>
+<span id="cb26-13"><a href="#cb26-13" aria-hidden="true" tabindex="-1"></a>    <span class="co"># metric_for_best_model="f1_macro", # </span><span class="al">TODO</span><span class="co"> implement F1 as metric: MOVE TO EXPERT</span></span>
+<span id="cb26-14"><a href="#cb26-14" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Pipe</span></span>
+<span id="cb26-15"><a href="#cb26-15" aria-hidden="true" tabindex="-1"></a>    output_dir <span class="op">=</span> <span class="st">"./models/training"</span>,</span>
+<span id="cb26-16"><a href="#cb26-16" aria-hidden="true" tabindex="-1"></a>    eval_strategy <span class="op">=</span> <span class="st">"steps"</span>   , eval_steps    <span class="op">=</span> <span class="fl">0.05</span>,</span>
+<span id="cb26-17"><a href="#cb26-17" aria-hidden="true" tabindex="-1"></a>    logging_strategy <span class="op">=</span> <span class="st">"steps"</span>, logging_steps <span class="op">=</span> <span class="fl">0.05</span>,</span>
+<span id="cb26-18"><a href="#cb26-18" aria-hidden="true" tabindex="-1"></a>    save_strategy <span class="op">=</span> <span class="st">"steps"</span>   , save_steps    <span class="op">=</span> <span class="fl">0.05</span>,</span>
+<span id="cb26-19"><a href="#cb26-19" aria-hidden="true" tabindex="-1"></a>    load_best_model_at_end <span class="op">=</span> <span class="va">True</span>,</span>
+<span id="cb26-20"><a href="#cb26-20" aria-hidden="true" tabindex="-1"></a>    save_total_limit <span class="op">=</span> <span class="dv">2</span>,</span>
+<span id="cb26-21"><a href="#cb26-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-22"><a href="#cb26-22" aria-hidden="true" tabindex="-1"></a>    disable_tqdm <span class="op">=</span> <span class="va">False</span>,</span>
+<span id="cb26-23"><a href="#cb26-23" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="launch-fine-tuning" class="level3">
+<h3 class="anchored" data-anchor-id="launch-fine-tuning">Launch fine-tuning</h3>
+<p>Finally, we can start the process, all it takes is 2 more lines of code:</p>
+<div class="sourceCode" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>trainer <span class="op">=</span> Trainer(</span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>    model <span class="op">=</span> model, </span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>    args <span class="op">=</span> training_arguments,</span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>    train_dataset<span class="op">=</span>dsd[<span class="st">"train"</span>],</span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>    eval_dataset<span class="op">=</span>dsd[<span class="st">"train_eval"</span>],</span>
+<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a>trainer.train()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<table class="table">
+<thead>
+<tr class="header">
+<th style="text-align: right;">epoch</th>
+<th style="text-align: right;">Step</th>
+<th style="text-align: right;">Training loss</th>
+<th style="text-align: right;">Evaluation loss</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">0.5263</td>
+<td style="text-align: right;">19</td>
+<td style="text-align: right;">8.163</td>
+<td style="text-align: right;">0.9146</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">1.053</td>
+<td style="text-align: right;">38</td>
+<td style="text-align: right;">6.869</td>
+<td style="text-align: right;">0.8175</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">1.579</td>
+<td style="text-align: right;">57</td>
+<td style="text-align: right;">5.298</td>
+<td style="text-align: right;">0.8265</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2.105</td>
+<td style="text-align: right;">76</td>
+<td style="text-align: right;">4.4</td>
+<td style="text-align: right;">0.8267</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2.632</td>
+<td style="text-align: right;">95</td>
+<td style="text-align: right;">3.065</td>
+<td style="text-align: right;">0.9924</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">3.158</td>
+<td style="text-align: right;">114</td>
+<td style="text-align: right;">2.548</td>
+<td style="text-align: right;">1.032</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">3.684</td>
+<td style="text-align: right;">133</td>
+<td style="text-align: right;">1.826</td>
+<td style="text-align: right;">0.9477</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">4.211</td>
+<td style="text-align: right;">152</td>
+<td style="text-align: right;">1.622</td>
+<td style="text-align: right;">0.9651</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">4.737</td>
+<td style="text-align: right;">171</td>
+<td style="text-align: right;">1.05</td>
+<td style="text-align: right;">1.1</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">5.0</td>
+<td style="text-align: right;">190</td>
+<td style="text-align: right;">1.09</td>
+<td style="text-align: right;">1.14</td>
+</tr>
+</tbody>
+</table>
+<!-- TODO SETUP F1 macro as metric -->
+<!-- TODO add training table -->
+<p>As a result you will get get a list of folders<a href="#fn17" class="footnote-ref" id="fnref17" role="doc-noteref"><sup>17</sup></a>, each containing the following files:</p>
+<ul>
+<li><code>config.json</code>: a dictionnary with the config, similar to <code>AutoConfig</code>.</li>
+<li><code>model.safetensors</code>: a file containing all the weights of the Model.</li>
+<li><code>optimizer.pt</code>, <code>rng_state.pth</code> and <code>scheduler.pt</code>: a copy of the optimizer, rng_state and scheduler used during training.</li>
+<li><code>trainer_state.json</code>: a dictionnary containing all metadata up to the current checkpoint.</li>
+<li><code>training_args.bin</code>: a copy of the training arguments.</li>
+</ul>
+<p>The model can be loaded like before:</p>
+<div class="sourceCode" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>reload_model <span class="op">=</span> AutoModelForSequenceClassification.from_pretrained(</span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"./models/training/checkpoint-76"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>It is worth noting that the trainer output also contains the best training checkpoint <code>trainer.state.best_model_checkpoint</code>. In our case, the best checkpoint is the checkpoint number 38<code>'./models/training/checkpoint-76'</code> the evaluation loss reaches a minimum (0.81) for this checkpoint.</p>
+</section>
+</section>
+<section id="sec-evaluation" class="level2 page-columns page-full">
+<h2 class="anchored" data-anchor-id="sec-evaluation">Use model for inference and evaluate performance</h2>
+<p>To evaluate the performance, we use the dev set (see <a href="#sec-preprocess" class="quarto-xref">Section&nbsp;3.1</a>) gold standard annotations and predicted ones, then compute the metrics introduced in <a href="#sec-classification-task" class="quarto-xref">Section&nbsp;2.1</a>: Accuracy, Precision, Recall and F1-score. Therefore the first step is to predict the labels on the dev set:</p>
+<!-- TODO s'assurer que ça ça fonctionne sur CPU -->
+<div class="columns page-columns page-full">
+<div class="column-body">
+<div class="sourceCode" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>IDs <span class="op">=</span> []</span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>y_gold <span class="op">=</span> []</span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>y_pred <span class="op">=</span> []</span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Reload the best model: </span></span>
+<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> AutoModelForSequenceClassification.from_pretrained(trainer.state.best_model_checkpoint)</span>
+<span id="cb29-7"><a href="#cb29-7" aria-hidden="true" tabindex="-1"></a>model.<span class="bu">eval</span>()</span>
+<span id="cb29-8"><a href="#cb29-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-9"><a href="#cb29-9" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> batch <span class="kw">in</span> tqdm(dsd[<span class="st">"dev"</span>].batch(<span class="dv">8</span>)): </span>
+<span id="cb29-10"><a href="#cb29-10" aria-hidden="true" tabindex="-1"></a>  IDs <span class="op">+=</span> [batch[<span class="st">"ID"</span>]]</span>
+<span id="cb29-11"><a href="#cb29-11" aria-hidden="true" tabindex="-1"></a>  y_gold <span class="op">+=</span> [batch[<span class="st">"labels"</span>]]</span>
+<span id="cb29-12"><a href="#cb29-12" aria-hidden="true" tabindex="-1"></a>  <span class="cf">with</span> torch.no_grad():</span>
+<span id="cb29-13"><a href="#cb29-13" aria-hidden="true" tabindex="-1"></a>    logits <span class="op">=</span> model(input_ids <span class="op">=</span> batch[<span class="st">"input_ids"</span>], attention_mask <span class="op">=</span> batch[<span class="st">"attention_mask"</span>]).logits.softmax(<span class="dv">1</span>).numpy()</span>
+<span id="cb29-14"><a href="#cb29-14" aria-hidden="true" tabindex="-1"></a>    y_pred <span class="op">+=</span> [np.argmax(logits, axis<span class="op">=</span><span class="dv">1</span>)]</span>
+<span id="cb29-15"><a href="#cb29-15" aria-hidden="true" tabindex="-1"></a>results <span class="op">=</span> pd.DataFrame({</span>
+<span id="cb29-16"><a href="#cb29-16" aria-hidden="true" tabindex="-1"></a>  <span class="st">"ID"</span>: np.concat(IDs),</span>
+<span id="cb29-17"><a href="#cb29-17" aria-hidden="true" tabindex="-1"></a>  <span class="st">"gold"</span>: np.concat(y_gold),</span>
+<span id="cb29-18"><a href="#cb29-18" aria-hidden="true" tabindex="-1"></a>  <span class="st">"pred"</span>: np.concat(y_pred)</span>
+<span id="cb29-19"><a href="#cb29-19" aria-hidden="true" tabindex="-1"></a>})</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div><div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>If you want to develop your understanding of the objects we manipulate, we provide a setp by step description in the <a href="./appendices.html#sec-ins-and-outs">appendices</a></p>
+</div>
+</div>
+<div class="no-row-height column-margin column-container"><div class="">
+<p>Note that this code snippet will only run if the model is loaded on your CPU. See <a href="#sec-GPU" class="quarto-xref">Section&nbsp;4.2</a> for device discussions.</p>
+</div></div></div>
+<p>Then, once we have the predictions, we can compute the metrics. In general, we recommand using the macro<a href="#fn18" class="footnote-ref" id="fnref18" role="doc-noteref"><sup>18</sup></a> F1 as it is the most representative of the model performance and works well with unbalanced datasets. Either way, you can use <a href="https://scikit-learn.org/stable/modules/model_evaluation.html#classification-metrics"><code>scikit-learn</code>’s <code>classification_report</code> function</a> to compute all metrics at once :</p>
+<div class="sourceCode" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.metrics <span class="im">import</span> classification_report</span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(classification_report(</span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>    y_true <span class="op">=</span> results[<span class="st">"gold"</span>].<span class="bu">map</span>(id2label)</span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>    y_pred <span class="op">=</span> results[<span class="st">"pred"</span>].<span class="bu">map</span>(id2label)</span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb31"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>              precision    recall  f1-score   support</span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>      agrees       0.74      0.61      0.67       122</span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>   disagrees       0.59      0.38      0.46        58</span>
+<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>     neutral       0.62      0.83      0.71       126</span>
+<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-7"><a href="#cb31-7" aria-hidden="true" tabindex="-1"></a>    accuracy                           0.66       306</span>
+<span id="cb31-8"><a href="#cb31-8" aria-hidden="true" tabindex="-1"></a>   macro avg       0.65      0.61      0.62       306</span>
+<span id="cb31-9"><a href="#cb31-9" aria-hidden="true" tabindex="-1"></a>weighted avg       0.67      0.66      0.65       306</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Here we can see that the model’s performance for the labels “agrees” and “neutral” is decent, but would benefit from further hyperparameter tuning. On the other hand, the model does not recognise the “disagrees” label. All in all, the current finetuning leads to mediocre results. In <a href="#sec-advanced" class="quarto-xref">Section&nbsp;4</a>, we will tweak the hyperparameters to reach better results.</p>
+</section>
+<section id="sec-essentials-conclusion" class="level2">
+<h2 class="anchored" data-anchor-id="sec-essentials-conclusion">Conclusion</h2>
+<p>In this section we have covered the basics to load the data and model, launch the fine-tuning and evaluate performances. We discussed:</p>
+<ul>
+<li>The importance of knowing your corpus and preprocessing the texts depending on your research question.</li>
+<li>How to choose a model depending on the task.</li>
+<li>Prepare the data for fine-tuning (tokenization and formatting) and set the hyperparameters.</li>
+<li>Launch the fine-tuning process.</li>
+<li>Use the model for inference and evaluate the model using classification metrics.</li>
+</ul>
+<p>You now have all the technical knowledge necessary to fine-tune most classification models using the HuggingFace <code>AutoModelForSequenceClassification</code> pipeline. However, in the <a href="#sec-evaluation" class="quarto-xref">Section&nbsp;3.4</a>, we saw that the performance were not optimal. In the following section, we will explore other model outputs to gain further insights and modify the hyperparameters to reach better performances. Also, the pipeline did not make use of more advanced hardware such as GPUs and Apple MX chips, we will discuss how to adapt the code accordingly.</p>
+</section>
+</section>
+<section id="sec-advanced" class="level1">
+<h1>Training pipeline: advanced practices</h1>
+<section id="sec-hyperparameters-tuning" class="level2">
+<h2 class="anchored" data-anchor-id="sec-hyperparameters-tuning">Diagnose and fix training problems</h2>
+<p>In <a href="#sec-essentials" class="quarto-xref">Section&nbsp;3</a> we fine-tuned a BERT model and saved checkpoints containing crucial information; one of them is the learning curve. The learning curve tracks the loss function<a href="#fn19" class="footnote-ref" id="fnref19" role="doc-noteref"><sup>19</sup></a> — a measure of the distance between the predicted labels and the gold standard labels — on the train set and the dev set as training progresses. We can retrieve it from the logs in <code>trainer_state.json</code> and plot it:</p>
+<div class="sourceCode" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">TODO</span><span class="co"> update and make it simpler</span></span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> plotly.express <span class="im">as</span> px</span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> <span class="bu">open</span>(<span class="st">"./models/training/trainer_state.json"</span>, <span class="st">"r"</span>) <span class="im">as</span> <span class="bu">file</span>:  <span class="co"># MODIFY !!!</span></span>
+<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a>    training_state <span class="op">=</span> json.load(<span class="bu">file</span>)</span>
+<span id="cb32-7"><a href="#cb32-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-8"><a href="#cb32-8" aria-hidden="true" tabindex="-1"></a>loss <span class="op">=</span> []</span>
+<span id="cb32-9"><a href="#cb32-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-10"><a href="#cb32-10" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> log <span class="kw">in</span> training_state [<span class="st">"log_history"</span>]:</span>
+<span id="cb32-11"><a href="#cb32-11" aria-hidden="true" tabindex="-1"></a>    step <span class="op">=</span> log[<span class="st">"step"</span>]</span>
+<span id="cb32-12"><a href="#cb32-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="st">"loss"</span> <span class="kw">in</span> log:</span>
+<span id="cb32-13"><a href="#cb32-13" aria-hidden="true" tabindex="-1"></a>        loss <span class="op">+=</span> [{<span class="st">"step"</span>: step, <span class="st">"loss"</span>: log[<span class="st">"loss"</span>], <span class="st">"split"</span>: <span class="st">"train"</span>}]</span>
+<span id="cb32-14"><a href="#cb32-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">elif</span> <span class="st">"eval_loss"</span> <span class="kw">in</span> log:</span>
+<span id="cb32-15"><a href="#cb32-15" aria-hidden="true" tabindex="-1"></a>        loss <span class="op">+=</span> [{<span class="st">"step"</span>: step, <span class="st">"loss"</span>: log[<span class="st">"eval_loss"</span>], <span class="st">"split"</span>: <span class="st">"eval"</span>}]</span>
+<span id="cb32-16"><a href="#cb32-16" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb32-17"><a href="#cb32-17" aria-hidden="true" tabindex="-1"></a>        <span class="co"># thweird</span></span>
+<span id="cb32-18"><a href="#cb32-18" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(log)</span>
+<span id="cb32-19"><a href="#cb32-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-20"><a href="#cb32-20" aria-hidden="true" tabindex="-1"></a>loss <span class="op">=</span> pd.DataFrame(loss)</span>
+<span id="cb32-21"><a href="#cb32-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-22"><a href="#cb32-22" aria-hidden="true" tabindex="-1"></a>px.line(loss, x <span class="op">=</span> <span class="st">"step"</span>, y <span class="op">=</span> <span class="st">"loss"</span>, color <span class="op">=</span>  <span class="st">"split"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="fig-learning-curve" class="quarto-figure quarto-figure-center quarto-float anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-learning-curve-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="./assets/learning_curve.png" class="img-fluid figure-img" style="width:70.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-learning-curve-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;4: Learning curve
+</figcaption>
+</figure>
+</div>
+<p>The train loss decreases steadily towards 0, while the dev loss decreases, reaches a minimum, then rises again. That rise is expected: it simply means the model keeps memorising the train set past the point where it stopped generalising better, which is why we reload the checkpoint at the minimum (<a href="#sec-evaluation" class="quarto-xref">Section&nbsp;3.4</a>) rather than the last one. What matters is how low that minimum is, and how the two curves sit relative to each other. Here is the pattern to aim for:</p>
+<div class="columns">
+<div class="column" style="width:50%;">
+<p><strong>The perfect case scenario</strong></p>
+<ul>
+<li>Both curves went down during training: the model has learned</li>
+<li>Both curves have the same loss values: no overfitting</li>
+<li>The curves are flat at the end: nothing more to be learned, apparently</li>
+</ul>
+<p>Once your learning curve looks like this, you only have to look at the evaluation metrics to see if you are satisfied with the prediction quality. If it does not, one of the problems below is likely the cause — each comes with the hyperparameters that fix it.</p>
+</div><div class="column" style="width:50%;">
+<p><img src="./assets/bertrain-good.png" class="img-fluid"></p>
+</div>
+</div>
+<p>To follow the rest of this section, one mental image is enough. Fine-tuning proceeds by small successive corrections: the model reads a <strong>batch</strong> of annotated texts, compares its predictions with your annotations, and adjusts its parameters slightly in the direction that reduces the gap. It then moves on to the next batch, and repeats until it has gone through the entire training set — that is one <strong>epoch</strong>. The hyperparameters below govern <em>how many</em> texts the model reads before each correction, <em>how large</em> each correction is, and <em>how many times</em> the model goes through your data.</p>
+<p><strong>Problem 1: the model hasn’t learned enough</strong></p>
+<div class="columns">
+<div class="column" style="width:50%;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="./assets/bertrain-flat.png" class="img-fluid figure-img"></p>
+<figcaption>Flat: nothing learned</figcaption>
+</figure>
+</div>
+</div><div class="column" style="width:50%;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="./assets/bertrain-more.png" class="img-fluid figure-img"></p>
+<figcaption>Still trending down: not done yet</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>At one extreme, both curves stay flat throughout training (left): the metrics are barely better than chance, and the losses have hardly moved — the corrections applied to the model were either too small to have any effect, or too few. At the other extreme, both curves are still going down together with no plateau in sight (right): the model is learning correctly, it simply hasn’t finished.</p>
+<ul>
+<li>The <strong>learning rate</strong> 🟢🟢🟢 <em>(importance)</em> sets the size of each correction. It is by far the most consequential hyperparameter: set too low, the fine-tuning leaves the model essentially unchanged. Try increasing it. Typical values: <span class="math inline">\([1e-6, 1e-4]\)</span>.</li>
+<li>The <strong>number of epochs</strong> 🟢 sets how many times the model goes through your training set. If performance was still improving when training stopped, the model simply did not get enough passes over your data. Typical values: 3-5, bearing in mind that each additional epoch costs computation time.</li>
+</ul>
+<p><strong>Problem 2: the model has learned your training set by heart</strong></p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="./assets/bertrain-overfit.png" class="img-fluid figure-img" style="width:50.0%"></p>
+<figcaption>Overfitting</figcaption>
+</figure>
+</div>
+<p>The model performs very well on the texts it was trained on, and noticeably worse on the dev set: both curves went down, but the train curve sits much lower than the dev curve. It has memorised your training examples instead of learning the distinction you are after. This is called <strong>overfitting</strong>, and it is the most common failure in this kind of project, particularly when annotations are few.</p>
+<ul>
+<li>The <strong>weight decay</strong><a href="#fn20" class="footnote-ref" id="fnref20" role="doc-noteref"><sup>20</sup></a> 🟢🟢 discourages the model from adopting extreme parameter values, which is the mechanism through which memorisation usually happens. Increasing it constrains the model and pushes it towards more general solutions; setting it too high prevents it from learning at all. Typical values: 0.01-0.1.</li>
+<li>Lowering the <strong>learning rate</strong> or the <strong>number of epochs</strong> works towards the same end: fewer and gentler corrections leave the model less opportunity to fit the specifics of your examples.</li>
+<li>The most reliable remedy, however, is not a hyperparameter: annotate more data.</li>
+</ul>
+<p><strong>Problem 3: the fine-tuning is erratic</strong></p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="./assets/bertrain-chaos.png" class="img-fluid figure-img" style="width:50.0%"></p>
+<figcaption>Erratic training</figcaption>
+</figure>
+</div>
+<p>Performance jumps up and down from one evaluation to the next instead of improving steadily. The corrections are being computed on too little evidence at a time, so each one chases the peculiarities of a handful of texts rather than a general pattern.</p>
+<ul>
+<li>The <strong>batch size</strong> 🟢🟢 is the number of texts the model reads before each correction. The larger the batch, the more each correction reflects a general tendency of your corpus rather than the noise of a few individual texts. Typical values: 16-64.</li>
+<li>A learning rate set too high produces the same symptom for a different reason: each correction overshoots. If enlarging the batch is not enough, lower the learning rate.</li>
+</ul>
+<p><strong>Problem 4: the fine-tuning does not fit on your machine</strong></p>
+<p>This one does not show up on the learning curve: large batches are desirable, but the whole batch must be held in memory at once, and this is usually where a personal computer gives up (see <a href="#sec-GPU" class="quarto-xref">Section&nbsp;4.2</a>). The way around it is to accumulate several small batches before applying a correction, which is almost equivalent and requires far less memory:</p>
+<p><span class="math display">\[\text{Batch size} = \text{Device batch size} \times \text{Gradient accumulation steps}\]</span></p>
+<ul>
+<li>The <strong>device batch size</strong> is what your hardware actually processes at once: lower it until the training fits in memory.</li>
+<li>The <strong>gradient accumulation steps</strong> compensates, so that the effective batch size stays in the range you wanted.</li>
+</ul>
+<p>Disk space calls for the same kind of attention. The <strong>eval</strong> and <strong>save strategies</strong> 🔴 can be set to <code>"epoch"</code> or <code>"steps"</code>; with <code>"steps"</code>, the <code>eval_steps</code> and <code>save_steps</code> parameters control how often the model is evaluated and saved. Since each checkpoint can weigh several gigabytes, use <code>save_total_limit</code><a href="#fn21" class="footnote-ref" id="fnref21" role="doc-noteref"><sup>21</sup></a> to cap the number of checkpoints kept on disk.</p>
+<div class="callout callout-style-default callout-tip callout-titled" title="Where to start">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Where to start
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>If you only change one hyperparameter, change the learning rate. A reasonable strategy is to keep everything else at the values used in <a href="#sec-training-parameters" class="quarto-xref">Section&nbsp;3.3.2</a>, try a few learning rates spanning the typical range (for instance 1e-5, 3e-5 and 5e-5), and compare the resulting learning curves. Only then is it worth tuning the weight decay and the batch size. Remember that these choices must be made by comparing performance on the <strong>dev</strong> set, never on the test set (<a href="#sec-classification-task" class="quarto-xref">Section&nbsp;2.1</a>).</p>
+</div>
+</div>
+</section>
+<section id="sec-GPU" class="level2">
+<h2 class="anchored" data-anchor-id="sec-GPU">Use GPU for faster training</h2>
+<p>This section is only useful if you have access to a GPU; if you don’t, training on CPU works exactly as shown earlier, just slower, and you can skip ahead to <a href="#sec-errors" class="quarto-xref">Section&nbsp;4.3</a>. If you have a NVIDIA GPU<a href="#fn22" class="footnote-ref" id="fnref22" role="doc-noteref"><sup>22</sup></a> and have set up your cuda<a href="#fn23" class="footnote-ref" id="fnref23" role="doc-noteref"><sup>23</sup></a> environment, or a Mac with an MX chip, you can accelerate training with cuda or mps respectively.</p>
+<p>You can check if your environment is ready to use cuda and mps with the following lines:</p>
+<div class="sourceCode" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> torch.cuda <span class="im">import</span> is_available <span class="im">as</span> cuda_available</span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> torch.mps <span class="im">import</span> is_available <span class="im">as</span> mps_available</span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"CUDA: "</span>, cuda_available())</span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"MPS: "</span>, mps_available())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>From there on, you will need to be aware of where your objects are stored. Indeed, in order to use the model on CUDA (or MPS), the input and the model need to be stored on the same hardware. The code for finetuning changes slightly:</p>
+<div class="sourceCode" id="cb34"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Choose your device</span></span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>DEVICE <span class="op">=</span> <span class="st">"cuda"</span> <span class="co"># or "mps", or "cpu"</span></span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Preprocess, tokenize, format and split your data</span></span>
+<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a>ds <span class="op">=</span> ...</span>
+<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Move the dataset on the desired device:</span></span>
+<span id="cb34-7"><a href="#cb34-7" aria-hidden="true" tabindex="-1"></a>ds <span class="op">=</span> ds.with_format(<span class="st">"torch"</span>, device <span class="op">=</span> DEVICE)</span>
+<span id="cb34-8"><a href="#cb34-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-9"><a href="#cb34-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Load the model</span></span>
+<span id="cb34-10"><a href="#cb34-10" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> ...</span>
+<span id="cb34-11"><a href="#cb34-11" aria-hidden="true" tabindex="-1"></a><span class="co"># move the model to the desired device</span></span>
+<span id="cb34-12"><a href="#cb34-12" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> model.to(device <span class="op">=</span> DEVICE)</span>
+<span id="cb34-13"><a href="#cb34-13" aria-hidden="true" tabindex="-1"></a><span class="co"># You can check the model device :</span></span>
+<span id="cb34-14"><a href="#cb34-14" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(model.device)</span>
+<span id="cb34-15"><a href="#cb34-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-16"><a href="#cb34-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Load the training arguments: </span></span>
+<span id="cb34-17"><a href="#cb34-17" aria-hidden="true" tabindex="-1"></a>training_args <span class="op">=</span> TrainingArguments(</span>
+<span id="cb34-18"><a href="#cb34-18" aria-hidden="true" tabindex="-1"></a>  ...</span>
+<span id="cb34-19"><a href="#cb34-19" aria-hidden="true" tabindex="-1"></a>  bf16<span class="op">=</span> <span class="bu">str</span>(device) <span class="op">==</span> <span class="st">"cuda"</span>, </span>
+<span id="cb34-20"><a href="#cb34-20" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb34-21"><a href="#cb34-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-22"><a href="#cb34-22" aria-hidden="true" tabindex="-1"></a><span class="co"># Set up the trainer and launch the processing</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The code for using the model for inference changes as well:</p>
+<div class="sourceCode" id="cb35"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> torch <span class="im">import</span> no_grad</span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>IDs <span class="op">=</span> []</span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>y_gold <span class="op">=</span> []</span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a>y_pred <span class="op">=</span> []</span>
+<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Reload the best model: </span></span>
+<span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> AutoModelForSequenceClassification.from_pretrained(trainer.state.best_model_checkpoint)</span>
+<span id="cb35-8"><a href="#cb35-8" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> model.to(device<span class="op">=</span>DEVICE)</span>
+<span id="cb35-9"><a href="#cb35-9" aria-hidden="true" tabindex="-1"></a>model.<span class="bu">eval</span>()</span>
+<span id="cb35-10"><a href="#cb35-10" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="bu">str</span>(DEVICE)<span class="op">==</span><span class="st">"cuda"</span>: model <span class="op">=</span> model.bf16() <span class="co"># Only works on GPUs</span></span>
+<span id="cb35-11"><a href="#cb35-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-12"><a href="#cb35-12" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> batch <span class="kw">in</span> tqdm(dsd[<span class="st">"dev"</span>].batch(<span class="dv">8</span>)): </span>
+<span id="cb35-13"><a href="#cb35-13" aria-hidden="true" tabindex="-1"></a>  IDs <span class="op">+=</span> [batch[<span class="st">"ID"</span>]]</span>
+<span id="cb35-14"><a href="#cb35-14" aria-hidden="true" tabindex="-1"></a>  y_gold <span class="op">+=</span> [batch[<span class="st">"labels"</span>]]</span>
+<span id="cb35-15"><a href="#cb35-15" aria-hidden="true" tabindex="-1"></a>  <span class="cf">with</span> torch.no_grad():</span>
+<span id="cb35-16"><a href="#cb35-16" aria-hidden="true" tabindex="-1"></a>    probs <span class="op">=</span> (</span>
+<span id="cb35-17"><a href="#cb35-17" aria-hidden="true" tabindex="-1"></a>      model(input_ids <span class="op">=</span> batch[<span class="st">"input_ids"</span>], attention_mask<span class="op">=</span> batch[<span class="st">"attention_mask"</span>])</span>
+<span id="cb35-18"><a href="#cb35-18" aria-hidden="true" tabindex="-1"></a>      .logits.cpu().softmax(<span class="dv">1</span>).<span class="bu">float</span>().numpy()</span>
+<span id="cb35-19"><a href="#cb35-19" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb35-20"><a href="#cb35-20" aria-hidden="true" tabindex="-1"></a>    y_pred <span class="op">+=</span> [np.argmax(probs, axis<span class="op">=</span><span class="dv">1</span>)]</span>
+<span id="cb35-21"><a href="#cb35-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-22"><a href="#cb35-22" aria-hidden="true" tabindex="-1"></a>results <span class="op">=</span> pd.DataFrame({</span>
+<span id="cb35-23"><a href="#cb35-23" aria-hidden="true" tabindex="-1"></a>  <span class="st">"ID"</span>: np.concat(IDs),</span>
+<span id="cb35-24"><a href="#cb35-24" aria-hidden="true" tabindex="-1"></a>  <span class="st">"gold"</span>: np.concat(y_gold),</span>
+<span id="cb35-25"><a href="#cb35-25" aria-hidden="true" tabindex="-1"></a>  <span class="st">"pred"</span>: np.concat(y_pred)</span>
+<span id="cb35-26"><a href="#cb35-26" aria-hidden="true" tabindex="-1"></a>})</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>If you don’t move the elements properly, you will face this error:</p>
+<div class="sourceCode" id="cb36"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>Expected all tensors to be on the same device, but found at least </span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>two devices, cuda:0 and cpu! (when checking argument for argument </span>
+<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a>index in method wrapper_CUDA__index_select)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The final step is to clean your GPU after using it. Otherwise you risk clogging the memory and flushing it becomes a hassle. Best practices include working inside a <code>try/except/finally</code> loop to make sure the memory is clean after use.</p>
+<div class="sourceCode" id="cb37"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> gc <span class="im">import</span> collect <span class="im">as</span> gc_collect</span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> torch.cuda <span class="im">import</span> empty_cache, synchronize, ipc_collect</span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> torch.cuda <span class="im">import</span> is_available <span class="im">as</span> cuda_available</span>
+<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a>tokenizer, model, dsd, trainer <span class="op">=</span> (<span class="va">None</span>, ) <span class="op">*</span> <span class="dv">4</span> <span class="co"># All objects that are moved to the GPU</span></span>
+<span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a><span class="cf">try</span>: </span>
+<span id="cb37-7"><a href="#cb37-7" aria-hidden="true" tabindex="-1"></a>  tokenize <span class="op">=</span> ...</span>
+<span id="cb37-8"><a href="#cb37-8" aria-hidden="true" tabindex="-1"></a>  dsd <span class="op">=</span> ...</span>
+<span id="cb37-9"><a href="#cb37-9" aria-hidden="true" tabindex="-1"></a>  model <span class="op">=</span> ...</span>
+<span id="cb37-10"><a href="#cb37-10" aria-hidden="true" tabindex="-1"></a>  trainer <span class="op">=</span> ...</span>
+<span id="cb37-11"><a href="#cb37-11" aria-hidden="true" tabindex="-1"></a>  trainer.train()</span>
+<span id="cb37-12"><a href="#cb37-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-13"><a href="#cb37-13" aria-hidden="true" tabindex="-1"></a><span class="cf">except</span> <span class="pp">Exception</span> <span class="im">as</span> e:</span>
+<span id="cb37-14"><a href="#cb37-14" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"# ERROR"</span> <span class="op">+</span> <span class="st">"#"</span> <span class="op">*</span> <span class="dv">93</span>)</span>
+<span id="cb37-15"><a href="#cb37-15" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(e)</span>
+<span id="cb37-16"><a href="#cb37-16" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"#"</span> <span class="op">*</span> <span class="dv">100</span>)</span>
+<span id="cb37-17"><a href="#cb37-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-18"><a href="#cb37-18" aria-hidden="true" tabindex="-1"></a><span class="cf">finally</span>:</span>
+<span id="cb37-19"><a href="#cb37-19" aria-hidden="true" tabindex="-1"></a>    <span class="kw">del</span> tokenizer, model, dsd, trainer <span class="co"># All objects that are moved to the GPU</span></span>
+<span id="cb37-20"><a href="#cb37-20" aria-hidden="true" tabindex="-1"></a>    empty_cache()</span>
+<span id="cb37-21"><a href="#cb37-21" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> cuda_available():</span>
+<span id="cb37-22"><a href="#cb37-22" aria-hidden="true" tabindex="-1"></a>        synchronize()</span>
+<span id="cb37-23"><a href="#cb37-23" aria-hidden="true" tabindex="-1"></a>        ipc_collect()</span>
+<span id="cb37-24"><a href="#cb37-24" aria-hidden="true" tabindex="-1"></a>    gc_collect()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="sec-errors" class="level2">
+<h2 class="anchored" data-anchor-id="sec-errors">Read the errors</h2>
+<p>You will face many, many errors. Sometimes they are random and rerunning the script / restarting the kernel will solve the issue. Others are subtle and difficult to identify. In such case, copy paste the error in google (in our experience, genAI is less likely to provide you the right answer), you’ll find forums with people who faced the same issue. As stressed in the introduction, downgrading/upgrading some libraries is likely to solve the issue. The four issues below are the ones you are most likely to run into — keep this section as a reference to come back to rather than something to read end to end.</p>
+<div class="callout callout-style-default callout-note callout-titled" title="Dataset formatting">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-14-contents" aria-controls="callout-14" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Dataset formatting
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-14" class="callout-14-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>Many errors are raised due to the functions assuming that your columns are well named and that the data has the right format. Make sure to have the following:</p>
+<ul>
+<li><code>"text"</code> column with the text as string</li>
+<li><code>"labels"</code> column with the labels as int; if you have multiple labels. Make sure this is a Tensor of integers</li>
+<li><code>"input_ids"</code> a column with the tokens truncated and padded to the same length. Make sure this is a Tensor of integers</li>
+<li><code>"attention_mask"</code> a column with the tokens truncated and padded to the same length. Make sure this is a Tensor of integers</li>
+</ul>
+<p>Also, depending on the model you’re using these columns can have different names. Make sure to check the huggingface documentation related to the model you are using as well as forums.</p>
+</div>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Memory overflow">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-15-contents" aria-controls="callout-15" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Memory overflow
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-15" class="callout-15-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>If you face this error using a GPU :</p>
+<div class="sourceCode" id="cb38"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>NVML_SUCCESS == r INTERNAL ASSERT FAILED at "/home/conda/feedstock_root/build_artifacts/libtorch_1750199048837/work/c10/cuda/CUDACachingAllocator.cpp":1016, please report a bug to PyTorch.</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>It is likely that you have reached the memory limit of your hardware. Reducing the device batch size or using a smaller model is likely to solve your issue. If you use a CPU the error becomes: <code>Invalid buffer size:</code></p>
+</div>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Tensor shapes">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-16-contents" aria-controls="callout-16" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Tensor shapes
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-16" class="callout-16-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>If you face the following error:</p>
+<div class="sourceCode" id="cb39"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>ValueError: too many values to unpack (expected 2)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The issue is likely to come from the tokenization step. If you type: <code>dsd["train"][0]["input_ids"].shape</code>, it must return <code>torch.Size([400])</code> and not <code>torch.Size([1, 400])</code>. Ensure that the tokenizer does not use <code>return_tensors="pt"</code> and that you use <code>dsd.with_format("torch")</code>.</p>
+</div>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Missing keys when saving/reloading a checkpoint">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-17-contents" aria-controls="callout-17" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Missing keys when saving/reloading a checkpoint
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-17" class="callout-17-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>You might face this scary issue:</p>
+<div class="sourceCode" id="cb40"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>There were missing keys in the checkpoint model loaded: ['bert.embeddings.LayerNorm.weight', ...</span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>There were unexpected keys in the checkpoint model loaded: ['bert.embeddings.LayerNorm.beta', ...</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>This is merely a convention issue. Some models/versions use beta/gamma keywords instead of weights/biases. This is not a problem and the model solve this automatically. If the loaded model shows unexpected low performance, this might be a sign that the model did not solve this issue automatically. You might have to rename the parameters yourself using the right convention <em>(very unlikely)</em>.</p>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="some-good-practices" class="level1">
+<h1>Some good practices</h1>
+<section id="save-your-model-and-results" class="level2">
+<h2 class="anchored" data-anchor-id="save-your-model-and-results">Save your model and results</h2>
+<p>??? necessary ??? -&gt; Export to hugging face for reproducibility and open science</p>
+</section>
+<section id="on-annotating-your-dataset" class="level2">
+<h2 class="anchored" data-anchor-id="on-annotating-your-dataset">On annotating your Dataset</h2>
+<p>@ Etienne</p>
+</section>
+<section id="whats-a-good-score" class="level2">
+<h2 class="anchored" data-anchor-id="whats-a-good-score">What’s a good score?</h2>
+<p>@ Etienne @ Julien</p>
+</section>
+</section>
+<section id="conclusion" class="level1">
+<h1>Conclusion</h1>
+<p>In this tutorial we covered many topics: - In <a href="#sec-key-concepts" class="quarto-xref">Section&nbsp;2</a> we defined some key concepts such as the supervised learning framework, BERT models and fine-tuning. It is important to have a broad understanding of these in order to easily manipulate the objects and adapt the code. - In <a href="#sec-essentials" class="quarto-xref">Section&nbsp;3</a> we laid out the usual fine-tuning pipeline including data processing and formatting, choosing the model, launching the fine-tuning and assessing the performance. <a href="#sec-essentials-conclusion" class="quarto-xref">Section&nbsp;3.5</a> summarises the main steps. - In <a href="#sec-advanced" class="quarto-xref">Section&nbsp;4</a> we stopped on more complex concepts such as the reading curve and provided instructions on how to tweak the hyperparameters. This section also discusses using GPU for quicker training and provides hotfixes for common errors.</p>
+</section>
+<section id="bibliography" class="level1">
+<h1>Bibliography</h1>
+
+
+</section>
+
+
+<div id="quarto-appendix" class="default"><section id="footnotes" class="footnotes footnotes-end-of-document" role="doc-endnotes"><h2 class="anchored quarto-appendix-heading">Footnotes</h2>
+
+<ol>
+<li id="fn1"><p>Smallest generative models weigh 16GB (<a href="https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct/tree/main">Llama-3-8B</a>) and larger models can easily reach 850GB (<a href="https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro/tree/main">Deepseek-V4-pro</a>). On the other hand, the models we’ll use weigh from 500MB (<a href="https://huggingface.co/google-bert/bert-base-uncased">google-bert/bert-base-uncased</a>) to 2.3BG (<a href="https://huggingface.co/FacebookAI/xlm-roberta-large/tree/main">FacebookAI/xlm-roberta-large</a>).<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn2"><p>Meaning you can download models on your machine, which is not the case for most proprietary models.<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn3"><p>If you are unfamiliar with the term “supervised learning”, it is defined in <a href="#sec-classification-task" class="quarto-xref">Section&nbsp;2.1</a>.<a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn4"><p><a href="https://www.youtube.com/watch?v=sDCtY9Z1bqE">Set up your cuda environment</a><a href="#fnref4" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn5"><p><a href="XXX">More on UV</a>, XXXX<a href="#fnref5" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn6"><p>Most famous Python library for Machine Learning. This library has had a major impact in the coding community, notably it imposed the <code>.fit</code> <code>.transform</code> syntax.<a href="#fnref6" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn7"><p>Most are built on the <strong>Transformer</strong> architecture, introduced by Google in 2017 — the same word behind the <code>transformers</code> Python library you’ll use throughout this tutorial.<a href="#fnref7" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn8"><p>It tends to be less likely as newer models tend to be larger. Read more in the <a href="#choose-and-load-a-model">Choose and load a model</a> section.<a href="#fnref8" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn9"><p>Some techniques allow users to exceed the maximum context window, please refer to XXX @ Léo @ Alexandre<a href="#fnref9" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn10"><p>Texts cannot be used directly and must undergo a tokenization process. Models come with a vocabulary of tokens, each text is therefore a combination of “tokens” from the vocabulary. <a href="https://web.stanford.edu/~jurafsky/slp3/2.pdf">Read more</a><a href="#fnref10" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn11"><p>Here we mention how the chose model impacts the preprocessing of the texts whereas we have not chosen a model yet. This is a good example of how non-linear pipelines are, there are many back and forths stressing the need for a well documented pipeline.<a href="#fnref11" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn12"><p>You need to ensure that the model you are using recognises emojis.<a href="#fnref12" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn13"><p>HuggingFace is a company for profit specialised in NLP and machine learning. They maintain many SOTA libraries such as <a href="https://huggingface.co/docs/transformers/index">Transformers</a>, <a href="https://huggingface.co/docs/datasets/index">Datasets</a> or <a href="https://sbert.net/">Sentence Transormers</a>. On top of maintaining the libraries, they publish posts about the latest tech, tutorials on their libraries, host a forum for debugging but also propose inference and training solutions if you don’t have access the required hardware.<a href="#fnref13" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn14"><p>Auto Classes are ready-to-use classes that will set up the right architecture depending on your task.<a href="#fnref14" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn15"><p>Texts cannot be used directly and must undergo a tokenization process. Models come with a vocabulary of tokens, each text is therefore a combination of “tokens” from the vocabulary. <a href="https://web.stanford.edu/~jurafsky/slp3/2.pdf">Read more</a><a href="#fnref15" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn16"><p>The syntax would be the same if you trained a model from scratch, therefore the pipeline uses training related names (Trainer, TrainingArguments, …), but that does not change the fact that we are indeed <em>fine-tuning</em> a model.<a href="#fnref16" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn17"><p>Depending on the <code>save_strategy</code> you set.<a href="#fnref17" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn18"><p>“macro” means that the evaluation normalises for the number of labels. Example in <a href="./appendices.html#sec-macro-micro">the appendices</a>.<a href="#fnref18" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn19"><p>The loss function is a function measuring the distance between the predicted labels and the gold standard labels.<a href="#fnref19" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn20"><p>AKA: L2-regularization.<a href="#fnref20" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn21"><p>If you use <code>load_best_model_at_end=True</code>, make sure to have <code>save_total_limit</code> &gt; 2, otherwise the best model will be overwritten by the last model (<a href="https://huggingface.co/docs/transformers/main_classes/trainer#transformers.TrainingArguments.save_total_limit">documentation</a>).<a href="#fnref21" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn22"><p><a href="https://www.tutorialpedia.org/blog/is-it-possible-to-run-cuda-on-amd-gpus/#2-closed-source-ecosystem">AMD GPUs do not have access to cuda</a> but you can work you way out with alternative solutions like <a href="https://github.com/vosen/ZLUDA">ZLuda</a><a href="#fnref22" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn23"><p><a href="https://www.youtube.com/watch?v=pPStdjuYzSI">What is cuda in 3 mins</a>; <a href="https://developer.nvidia.com/cuda-downloads">Install cuda on your machine</a><a href="#fnref23" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+</ol>
+</section></div></main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
