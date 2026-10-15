@@ -71,9 +71,9 @@ for (s1, s2) in last_duplicates:
 ```
 
 
-## Good practices -> to move back to main 
+## Good practices
 
-**Stratification of the splits**  <!-- Move to good practices ??? -->
+**Stratification of the splits**
 
 _The process of stratification consists of creating subgroups as defined by meta data (years for instance) and selecting a same number of texts per subgroup. This process intends to produce a dataset with uniform distribution across the selected metadata._
 
@@ -185,7 +185,7 @@ tensor([[-0.8752, -0.3879, -0.7193,  ...,  0.0322, -0.7454,  0.9330],
 We can see that both outputs are matrices with values ranging between -1 and 1. The shapes differ however:
 
 - `last_hidden_state` has a shape of `[2, 20, 768]` with `2` corresponding to the number of entries, `20` corresponds to the number of tokens per entry and `768` corresponds to the dimension of the embeddings[^embdeddings-dimension]. Therefore we understand that this correspond to a matrix mapping each entry and token to an embedding.
-- `pooler_output` has a shape of `[2,768]`, we find again the `2` corresponding to the number of entries and `768` corresponding to the dimension of the embeddings. We understand that we lost the token dimension, which is the goal of `pooling` (more on [pooling](XXX)).
+- `pooler_output` has a shape of `[2,768]`, we find again the `2` corresponding to the number of entries and `768` corresponding to the dimension of the embeddings. We understand that we lost the token dimension, which is the goal of `pooling`.
 
 [^embdeddings-dimension]: Which matches the [description of the moel](./index.qmd#nte-model-description).
 

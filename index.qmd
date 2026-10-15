@@ -1,179 +1,114 @@
 ---
 title: "Augmented Social Scientist: train encoder models on a classification task"
 format: html
-author: 
+author:
     - name: A. Morin
       email: axel.morin@polytechnique.edu
+      role: "Author"
+    - name: Alban Derepas
+      email: alban.derepas@ensae.fr
       role: "Author"
 toc: true
 toc-depth: 3
 ---
-<!-- JB: Not sure we need to use the term Augmentation here, we're getting a bit more frileux on this :) -->
-
 # Introduction
 
-<!-- JB: Start by explaining what text annotation is --> 
+Social scientists working with large corpora of documents (tweets, abstracts, newspaper articles, videos...) often need to annotate each item with one or more labels. Common strategies include hiring interns, outsourcing to a company such as MTurk, or automating the task. Since the development of LLMs, it has become common practice to use them as annotators in social science contexts (Gilardi et al., 2023; Bonikowski et al, 2022). One such study annotated 4.5 million tweets addressed to French members of parliament with the labels "attack", "critique" or "support" to describe the conditions of hate speech towards them on Twitter. In Machine Learning jargon, this is a "classification task".
 
-<!-- ES:  Je commencerai le tutoriel de manière un peu plus douce sur les principales notions, là ça rentre vraiment dans le dur rapidement. Plus, il y a trois stratégies : encoder non finetuné, encoder finetuné et décodeur en inférence non ? On ne parle pas de plongement seuls + ML. Donc peut être un peu mieux situer l'approche, de manière un peu plus intuitive. Et peut être aussi introduire ici le fait qu'un humain est capable d'annoter et qu'on veut étendre cette équation humaine.  -->
+This tutorial is part of a series on using LLMs as annotators. A companion [tutorial](https://www.css.cnrs.fr/classification-with-generative-llms-and-api-calls/) covers the generative AI (genAI) approach: writing a prompt and parsing the label out of the model's response. Here, we cover the encoder approach instead — an encoder is an LLM that does not generate text[^smaller-info] — fine-tuned on an annotated sample the way a human expert would learn the task[^supervised-learning-disclaimer]. This gives you more control over the model and its performance, at the cost of more NLP knowledge and coding skill: this tutorial is accordingly longer than the genAI one.
 
-Social scientists dealing with large corpora of documents (tweets, abstracts, newspaper articles, videos, ...) often need to annotate each item with one or more labels. To complete this cumbersome task, social scientists have adopted many strategies such as hiring interns, externalise the task to a company such as MTurk, or use computers to do the job (SOURCE of fun fact ?). Since the development of LLMs, it has now become a common practice to use them as annotators in social science contexts (Gilardi et al., 2023; Bonikowski et al, 2022; Do et al., 2022). For instance Claesson (2026) annotated 4.5 million tweets addressed to French members of the parliament. Each tweet could be assigned the labels "attack", "critique" or "support". With these annotations, she was able to describe the conditions of hate speech towards French parliamentarians on twitter. <!-- TODO reformulate --> In the Machine Learning jargon, the annotation task is referred to as a "classification task".
+[^smaller-info]: Smallest generative models weigh 16GB ([Llama-3-8B](https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct/tree/main)) and larger ones can reach 850GB ([Deepseek-V4-pro](https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro/tree/main)). The open weights[^open-weights] encoder models used here weigh from 500MB ([google-bert/bert-base-uncased](https://huggingface.co/google-bert/bert-base-uncased)) to 2.3GB ([FacebookAI/xlm-roberta-large](https://huggingface.co/FacebookAI/xlm-roberta-large/tree/main)).
 
-_AM: i want to say "its not magic, don't use an LLM for fun and pretend it's science". Dont know if we must, dont know how to phrase it_<br/>
-These practices are at the intersection of quantitative social sciences and computer science called _the Computational Social Sciences_. This field of studies builds upon social science theories and leverages computer science methods to scale projects or offer new analyses. In the case of corpus annotation, scientists must define the labels and codebook based on social science theories. To assist social scientists in this task, our team developped [ActiveTigger](css.cnrs.fr/active-tigger), an open-source software, designed by and for social scientists, to support collaborative text annotation and code-free model fine-tuning.
+[^open-weights]: Meaning you can download the model to your own machine, unlike most proprietary models.
 
-
-In this series of tutorials we dive into the technicalities of the classification pipeline using LLMs as annotators. In a previous [tutoriel](https://www.css.cnrs.fr/classification-with-generative-llms-and-api-calls/), we demonstrated how to use generative AI (genAI) for this task; the pipeline consisted of creating an appropriate prompt and retrieving the label in the genAI response. In this tutorial however we demonstrate how to use an encoder model (an LLM that does not generate texts) (AM: JB is it the right term or should we call it an embedding model?) to perform this task. We are going to use smaller[^smaller-info] open weights models[^open-weights] and "teach" it how to annotate texts the way an expert would using the supervised learning framework[^supervised-learning-disclaimer]. Researchers can maintain more control on the model and its performance, however, implementing such techniques requires more NLP knowledge and coding skills. Therefore this tutorial is longer and introduces many concepts that could be overlooked when using black box models.
-
-[^smaller-info]: Smallest generative models weigh 16GB ([Llama-3-8B](https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct/tree/main)) and larger models can easily reach  850GB ([Deepseek-V4-pro](https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro/tree/main)). On the other hand, the models we'll use weigh from 500MB ([google-bert/bert-base-uncased](https://huggingface.co/google-bert/bert-base-uncased)) to 2.3BG ([FacebookAI/xlm-roberta-large](https://huggingface.co/FacebookAI/xlm-roberta-large/tree/main)).
-
-[^open-weights]: Meaning you can download models on your machine, which is not the case for most proprietary models.
-
-[^supervised-learning-disclaimer]: If you are unfamiliar with the term "supervised learning", it is defined in @sec-classification-task.
-
-
-The main objective of this tutorial is to **fine-tune** an **encoder model** and introduce the key concepts so you can adapt the code to your specific task. 
-
-After presenting the objectives, materials and setup steps, we introduce the key NLP and Machine Learning concepts, we will break down the pipeline starting with loading the dataset and format it, then load the model and set the hyperparameters, finally launch the fine-tuning process. Once the process finishes, we will assess the performance and discuss how we can tweak the hyperparameters to reach satisfying performance. We conclude this tutorial with advices on how to correctly incorporate the results in a social science project. Throughout the tutoriel we provide practical insights on how to best use your hardware.
-
-<!-- TODO: write a pros and cons of the two methods -->
-
-## Objectives and materials
-
-In this tutorial we will :
-
-- Identify the main NLP and Machine Learning concepts.
-- Understand the general pipeline for text classification with encoder models.
-- Develop some familiarity with preprocessing and training techniques.
-- Introduce the key metrics to evaluate models' performance.
-- Discuss how to properly incorporate this step in your research using state-of-the-art practices.
-
-In this tutorial, we will NOT cover : 
-
-- The Python syntax, we expect readers to already have some knowledge of the coding language. See [Lino's course](https://pythonds.linogaliana.fr/) for an introduction 
-- The fundamentals of NLP and the intersection of linguistics and computer science, we will only introduce concepts necessary to understanding this tutorial. See [Jurafsky](https://web.stanford.edu/~jurafsky/slp3/) 
-- The conceptualisation of your research question to fall into the automatic annotation framework, we expect readers to be able to design their protocol and motivate it using appropriate social sciences or any domain speficic concepts.
-
-We provide a notebook with all cells pre-run [here](https://github.com/AXLMRIN/encoder-classifier-tuto/blob/main/tuto.ipynb)
-
-## Install environment: 
-
-For this tutorial we use Python version 3.12 and setup the environment with the following command:
-
-```bash
-pip install -qU pandas "transformers==4.52.4" datasets ipykernel matplotlib torch "accelerate>=0.26.0" scikit-learn plotly "nbformat>=4.2.0"
-```
-<!-- TODO Update -->
-
-We use SOTA Python librairies such as [PyTorch](https://pytorch.org/) and [Transformers](https://huggingface.co/docs/transformers/index). These librairies are well documented and large online communities of users have posted much valuable content to assist you during your journey. More specifically, it is likely that you will face implementation issues related to the versions of the libraries; many forums will guide you into choosing the adequate librairies versions to install depending on your task and model of choice. For this reason, we recommend using a virtual environments manager such as conda[^4] or uv[^5] and keep track of your versions to save painful debugging time in the long run.
-
-[^4]: [Set up your cuda environment](https://www.youtube.com/watch?v=sDCtY9Z1bqE)
-
-[^5]: [More on UV](XXX), XXXX
-
-# Key concepts and valuable resources to start your NLP journey{#sec-key-concepts}
-
-In this tutorial we will **fine-tune** a **pretrained language model** of type **encoder** to perform a **classification** task. The description itself needs clarification, we will endeavor to shed light on all of these keywords while remaining on the surface level to keep this tutorial legible. At each step, we provide valuable resources to further understand the concepts as well as the links to the litterature.
-
-
-::: {.callout-warning}
-Question : est-ce qu'on parle d'autres encodeurs que des BERT dans ce tytorial, si non : pourquoi ne pas se concentrer sur les BERT ?
-
-AM: Non, c'est vrai mais si on se concentre sur des BERTs des non-initiés risqueraient de ne pas faire le lien entre BERT et encodeurs. Je me dis si on définit largement les encodeurs c'est plus facile de dire : "nous on se concentre sur les BERTs qui est un type d'encodeur". Opinion?
-:::
-
-## The classification task{#sec-classification-task}
-
-The classification task is a concept from Machine Learning, it refers to an algorithm that will use input data (= predictors) to assign a class / label to each input. [Scikit-Learn](scikit-learn.org/stable)[^scikit-learn] puts it this way: _Identifying which category an object belongs to._ In the context of annotation, the connection is fairly direct, each text input needs to be assigned a label, therefore it is a classification task. 
-
-[^scikit-learn]: Most famous Python library for Machine Learning. This library has had a major impact in the coding community, notably it imposed the `.fit` `.transform` syntax.
-
-Classification is part of the **supervised learning** family in machine learning: this means that to be able to assign labels, the algorithm will first need to be **fitted** onto some **training data**, _in our case handmade annotations_. The fitting/training process consists of providing inputs and labels, so the algorithm can adapt to the task and _"learn"_. This means that social scientists will first need to annotate a small set of texts in order to train the classifier. 
-
-Classifiers often have structuring parameters called **hyperparameters** that alter the algorithm and are not changed during training. These parameters must be set with great care in order to reach satisfying performance.
-
-::::{.columns}
-
-:::{.column width=70%}
-To evaluate classifiers we use [normalised metrics](https://scikit-learn.org/stable/modules/model_evaluation.html#which-scoring-function-should-i-use) such as [Precision](https://en.wikipedia.org/wiki/Precision_and_recall), [Recall](https://en.wikipedia.org/wiki/Precision_and_recall), [Accuracy](https://en.wikipedia.org/wiki/Accuracy_and_precision#In_binary_classification) and [F1 score](https://en.wikipedia.org/wiki/F-score#Definition). Depending on your research you may want to optimise one metric or another. 
-
-- Precision: _"out of all the elements predicted as class A, how many were indeed from class A?"_, this metric is rather conservative, optimising this score will limit the number of false positives.
-- Recall: _"out of all the elements that should have been classified as A, how many were indeed classified as A?"_, this metric is XXX, optimising this score will limit the number of false negatives.
-- Accuracy: _"across all classes, how many elements were classified correctly?"_, XXX critique of this metric JB?
-- F1 score: this score is an harmonic mean of recall an precision.
-
-:::
-
-:::{.column width=30%}
-![precision and recall](./assets/precision_recall.jpg){#fig-precision-recall width=100%}
-:::
-
-::::
-
-To correctly assess a model evaluation and prevent cherry-picking, we proceed to separate evaluations on distinct subsets of texts and annotations:
-
-- The training set: these items will be shown to the algorithm to _learn_. Metrics on the train set will be boosted.
-- The dev set: these items will be used to assess the performance of the algorithm on new data. This set is used to choose the hyperparameters. Metrics on the dev set are likely to be boosted due to the fact that the hyperparameters are chosen to optimise this score.
-- The test set: these items will be used to assess the performance of the algorithm with the chosen hyperparameters on new data. Metrics on the test set are meant to be representative of algorithm's performance on new data. Scientists are encouraged to communicate on metrics computed on the test set to prevent from cherry picking the performance metrics. 
-
-## Models
-
-The models used in this tutorial are neural networks. Their behaviour is entirely determined by a large set of adjustable quantities called **parameters** — also referred to as **weights** and **biases** — and **training** a model means adjusting these quantities until it produces the output you expect. For the purposes of this tutorial, this is all you need to know about their internals.
-
-:::{.callout-note collapse="true" title="Learn more about neural networks"}
-
-- [3Blue1Brown, *Neural networks*](https://www.youtube.com/playlist?list=PLZHQObOWTQDNU6R1_67000Dx_ZCJB-3pi): a visual, intuition-first video series. A good entry point if you have no prior exposure to the topic.
-- [Michael Nielsen, *Neural Networks and Deep Learning*](http://neuralnetworksanddeeplearning.com/): a free online book, self-contained and readable without an advanced mathematical background.
-- [Jurafsky & Martin, chapter 7: *Neural Networks*](https://web.stanford.edu/~jurafsky/slp3/7.pdf): the reference NLP textbook we cite throughout this tutorial, for readers who want the formal treatment.
-
-:::
+[^supervised-learning-disclaimer]: If "supervised learning" is a new term to you, it is defined in @sec-classification-task.
 
 ## Encoders vs. decoders — why not just use ChatGPT?{#sec-encoders}
 
-Modern language models[^transformer] come in two families, and they differ in what they produce and in how they learn your annotation categories:
+Modern language models[^transformer] come in two families, differing in what they produce and in how they learn your annotation categories:
 
-- **Decoder models** (GPT, Llama, Claude, the models behind ChatGPT and similar tools) produce text, so they are well suited to open-ended tasks such as conversation, drafting, summarising or translation. To annotate a corpus with a decoder, you have to instruct it every time through a prompt, and hope it interprets your instructions correctly. These models are very large, rarely runnable on a personal computer, and typically used through an API, as we did in the [previous tutorial](https://www.css.cnrs.fr/classification-with-generative-llms-and-api-calls/).
-- **Encoder models** (BERT and its relatives) produce no text at all, but an **embedding**: a numerical representation of a text's meaning. This makes them well suited to tasks with a closed, well-defined output, such as classification, similarity ranking or clustering. Rather than being prompted, an encoder is **fine-tuned** on a few hundred texts you label yourself: it learns from your judgment calls, not from a description of them. Encoders are much smaller than decoders, and will most likely run on your own machine[^7].
+- **Decoder models** (GPT, Llama, Claude — the models behind ChatGPT and similar tools) produce text, which suits open-ended tasks such as conversation, drafting, summarising or translation. To annotate a corpus with a decoder, you instruct it through a prompt and hope it interprets your instructions correctly, every time. These models are very large, rarely runnable on a personal computer, and typically used through an API, as in the companion tutorial on generative AI.
+- **Encoder models** (BERT and its relatives) produce no text at all, but an **embedding**: a numerical representation of a text's meaning. This suits tasks with a closed, well-defined output, such as classification, similarity ranking or clustering. Rather than being prompted, an encoder is **fine-tuned** on a few hundred texts you label yourself: it learns from your judgment calls, not from a description of them. Encoders are much smaller than decoders and will most likely run on your own machine[^7].
 
-That upfront annotation effort, and a model that only ever performs this one task, is the price you pay for an encoder — but in exchange, you keep full control over it. This has concrete consequences for cost, confidentiality, reproducibility and even measurement quality, which we discuss next.
+That upfront annotation effort, and a model that only ever performs this one task, is the price you pay for an encoder — in exchange, you keep full control over it. This has concrete consequences for cost, confidentiality, reproducibility and even measurement quality, detailed next (@sec-pros-cons).
 
-[^transformer]: Most are built on the **Transformer** architecture, introduced by Google in 2017 — the same word behind the `transformers` Python library you'll use throughout this tutorial.
+[^transformer]: Most are built on the **Transformer** architecture, introduced by Google in 2017 (Vaswani et al., 2017) — the same word behind the `transformers` Python library used throughout this tutorial.
 
-[^7]: It tends to be less likely as newer models tend to be larger. Read more in the [Choose and load a model](#choose-and-load-a-model) section.
+[^7]: Less likely as newer models tend to be larger — see [Choose and load a model](#choose-and-load-a-model).
 
-### Pros and cons for social science research{#sec-pros-cons}
+## Pros and cons for social science research{#sec-pros-cons}
 
-- **Measurement quality**: the choice isn't just a matter of convenience — it can bias your conclusions. Ashwin et al. (2025) compared the two approaches on interviews with Rohingya refugees and their Bengali hosts: a generative LLM's coding errors were not random, but systematically correlated with respondents' characteristics, whereas a model fine-tuned on a subset of human-coded transcripts showed less measurement error and bias overall.
-- **Coding skills**: fine-tuning requires more code than an API call, which is both an opportunity to build skills and a cost in time. [ActiveTigger](css.cnrs.fr/active-tigger) offers a code-free alternative for collaborative annotation and fine-tuning.
+- **Measurement quality**: the choice isn't just a matter of convenience, it can bias your conclusions. Ashwin et al. (2025) compared both approaches on interviews with Rohingya refugees and their Bengali hosts: a generative LLM's coding errors were not random, but systematically correlated with respondents' characteristics, whereas a model fine-tuned on a subset of human-coded transcripts showed less measurement error and bias overall.
+- **Coding skill**: fine-tuning requires more code than an API call — an opportunity to build skills, and a cost in time.
+- **Hardware and cost**: fine-tuning needs a machine to run on, while API calls need a paid key; neither is equally accessible to everyone. On large corpora this tips decisively in the encoder's favour: Laurer et al. (2024) show an encoder fine-tuned on as few as 500 annotated texts can match classical models trained on ten times more data, and fine-tuned small models consistently outperform zero-shot generative models on classification while costing far less to run at scale (Bucher & Martini, 2024).
+- **Confidentiality**: sensitive corpora cannot be sent through an external API, so any model — generative or encoder — has to run on a trusted server instead. Encoders, being lighter on hardware, make that bar easier to clear.
+- **Open weights, control and reproducibility**: most generative models are "closed weights", usable only through an API, while Hugging Face models — encoder or generative — are "open weights" and downloadable. Providers rarely disclose the data behind a closed model or its future changes, limiting interpretability and letting performance shift after an update. Since you own the encoder and its fine-tuning data, your results stay reproducible and easier to interpret.
 
-<!--TODO add logo-->
+This tutorial fine-tunes an **encoder model**: we load and format a dataset, load the model and set its hyperparameters, launch fine-tuning, assess performance, and tune hyperparameters to improve it. We close with advice on incorporating the results into a social science project, including hardware tips along the way.
 
-- **Hardware and cost**: fine-tuning needs a machine to run on, while API calls need a paid key; neither is equally accessible to everyone.
-- **Confidentiality**: sensitive corpora cannot be sent through an external API, so any model, generative or encoder, has to run on a trusted server instead. Encoders, being lighter on hardware, make that bar easier to clear.
-- **Open weights, control and reproducibility**: most generative models are "closed weights", usable only through an API, while HuggingFace models, encoder or generative, are "open weights" and can be downloaded. Providers rarely disclose the data behind a closed model or its future changes, which limits interpretability and means performance can shift after an update (source). Since you own the encoder and its fine-tuning data, your results stay reproducible and easier to interpret (XXX additional techniques to probe the model???).
+## Objectives and materials
 
-### How encoders represent text
+This tutorial will:
 
-The rest of this tutorial deals with encoder models only (AM: or maybe embedding models ? JB what's the difference?): texts close in meaning are given close embeddings, a proximity measured by the "similarity score" (usually the cosine distance).
+- Identify the main NLP and Machine Learning concepts needed.
+- Walk through the general pipeline for text classification with encoder models.
+- Build familiarity with preprocessing and training techniques.
+- Introduce the key metrics for evaluating model performance.
+- Discuss how to incorporate this step into your research using current best practices.
+
+It will **not** cover:
+
+- Python syntax — we assume you already know the language. See [Lino's course](https://pythonds.linogaliana.fr/) if you don't.
+- The fundamentals of NLP and linguistics, beyond what's necessary here. See [Jurafsky](https://web.stanford.edu/~jurafsky/slp3/).
+- How to turn your research question into an annotation protocol — we assume you can design and motivate that yourself.
+
+A notebook with all cells pre-run is available [here](https://github.com/AXLMRIN/encoder-classifier-tuto/blob/main/tuto.ipynb).
+
+# Key concepts and valuable resources to start your NLP journey{#sec-key-concepts}
+
+This tutorial **fine-tunes** a **pretrained language model** of type **encoder** to perform a **classification** task. The rest of this section unpacks those terms, at a level sufficient to follow the rest of the tutorial, with pointers to the literature for readers who want to go deeper.
+
+## The classification task{#sec-classification-task}
+
+This tutorial assumes two prerequisites: familiarity with the supervised learning framework (what training/fitting a classifier means, and standard metrics such as precision, recall, accuracy and F1 score), and an annotated dataset to fine-tune on.
+
+As a reminder of the vocabulary used throughout: to evaluate a classifier without cherry-picking results, annotations are split into three sets — the **train** set the model learns from, the **dev** set used to pick hyperparameters, and the **test** set reserved for a final, unbiased read of performance.
+
+## Models
+
+The models used here are neural networks. Their behaviour is entirely determined by a large set of adjustable quantities called **parameters** — also known as **weights** and **biases** — and **training** a model means adjusting these quantities until it produces the output you expect. That's all you need to know about their internals for this tutorial.
+
+:::{.callout-note collapse="true" title="Learn more about neural networks"}
+
+- [3Blue1Brown, *Neural networks*](https://www.youtube.com/playlist?list=PLZHQObOWTQDNU6R1_67000Dx_ZCJB-3pi): a visual, intuition-first video series — a good entry point with no prior exposure.
+- [Michael Nielsen, *Neural Networks and Deep Learning*](http://neuralnetworksanddeeplearning.com/): a free, self-contained online book.
+- [Jurafsky & Martin, chapter 7: *Neural Networks*](https://web.stanford.edu/~jurafsky/slp3/7.pdf): the reference NLP textbook cited throughout this tutorial, for the formal treatment.
+
+:::
+
+## How encoders represent text
+
+From here on, this tutorial deals with encoder models only: texts close in meaning are given close embeddings, a proximity measured by the "similarity score" (usually cosine distance).
 
 ![Similarity](./assets/similarity.png){#fig-similarity width=100%}
 
 In @fig-similarity, "apple" and "pear" score high in similarity — but in the context of Apple's new product, "apple"'s embedding shifts and the score drops. Classification works the same way: for a "left/right" label, the embeddings should capture what sets left-wing texts apart from right-wing ones.
 
-Every encoder also has a **maximum context window**: the maximum[^max-window-size-actually] number of tokens[^tokens-def] it can process at once — anything beyond is simply ignored. Older models had short windows (128 to 512 tokens), so long texts had to be split into sentences or paragraphs.
+Every encoder also has a **maximum context window**: the maximum number of tokens[^tokens-def] it can process at once — anything beyond is simply ignored. Older models had short windows (128 to 512 tokens), so long texts had to be split into sentences or paragraphs.
 
-[^max-window-size-actually]: Some techniques allow users to exceed the maximum context window, please refer to XXX @ Léo @ Alexandre
+[^tokens-def]: Texts are tokenized before use: models come with a vocabulary of tokens, and each text is a combination of tokens from that vocabulary. [Read more](https://web.stanford.edu/~jurafsky/slp3/2.pdf).
 
-[^tokens-def]: Texts cannot be used directly and must undergo a tokenization process. Models come with a vocabulary of tokens, each text is therefore a combination of "tokens" from the vocabulary. [Read more](https://web.stanford.edu/~jurafsky/slp3/2.pdf)
+BERT was released by Google in 2019 (Devlin et al., 2019); CamemBERT (French), RoBERTa and ModernBERT are later variants built on it. This tutorial uses `bert-base-uncased`.
 
-BERT was released by Google in 2019; CamemBERT (French), RoBERTa and ModernBERT are later variants built on it. In this tutorial we'll use `bert-base-uncased`.
+## Pretrained models and fine-tuning
 
-## Pretrained Models and Fine-tuning
+**Pretrained** means the heavy work is already done: specialised organisations with the hardware and data to do so have trained these models to recognise language patterns — a process taking days to months — and published the resulting weights on Hugging Face for you to download.
 
-**Pretrained** means the heavy work has already been done for you: specialised organisations with the required hardware and data have already trained these models to recognise language patterns, a process that can take from days to months (XXX source), and published the resulting weights on HuggingFace for you to download.
+**Fine-tuning**, by contrast, is quick: a few minutes, at most a few dozen on limited hardware. It nudges the weights and biases by a much smaller amount than pretraining, turning the general-purpose model into a classifier for your own labels — one assessed with the same metrics (F1 score...) and the same train/dev/test framework as any other classifier.
 
-Fine-tuning, by contrast, is quick: a few minutes, at most a few dozen on more limited hardware. It only nudges the weights and biases, by a much smaller amount than pretraining, turning the general-purpose model into a classifier for your own labels — one assessed with the same metrics (F1 score, ...) and the same train, dev, test framework as any other classifier.
+Concretely, fine-tuning proceeds by small successive corrections: the model reads a **batch** of annotated texts, compares its predictions with your annotations, and adjusts its parameters slightly to reduce the gap. It moves to the next batch and repeats until it has gone through the whole training set — one **epoch**. The hyperparameters you'll set later (@sec-hyperparameters-tuning) govern *how many* texts the model reads before each correction, *how large* each correction is, and *how many times* it goes through your data.
 
-:::{.callout-note  collapse="true" title="Learn more about the Transformer architecture, the embedding space and training encoders"}
+:::{.callout-note collapse="true" title="Learn more about the Transformer architecture, the embedding space and training encoders"}
 
 - [The illustrated transformer](https://jalammar.github.io/illustrated-transformer/)
 - [What are Transformer Neural Networks](https://www.youtube.com/watch?v=XSSTuhyAmnI)
@@ -182,26 +117,34 @@ Fine-tuning, by contrast, is quick: a few minutes, at most a few dozen on more l
 
 :::
 
+## Install environment
+
+This tutorial uses Python 3.12:
+
+```bash
+pip install -qU pandas "transformers==4.52.4" datasets ipykernel matplotlib torch "accelerate>=0.26.0" scikit-learn plotly "nbformat>=4.2.0"
+```
+
+[PyTorch](https://pytorch.org/) and [Transformers](https://huggingface.co/docs/transformers/index) are well documented, with large communities that have already debugged most version-compatibility issues you'll hit. We recommend a virtual environment manager such as conda[^4], and keeping track of your library versions to save debugging time later.
+
+[^4]: [Set up your cuda environment](https://www.youtube.com/watch?v=sDCtY9Z1bqE)
+
 # Fine-tuning pipeline: the essential{#sec-essentials}
 
-Let's finally dive into the implementation of fine-tuning a pretrained language model of type encoder to perform a classification task!
+We use a dataset introduced by Luo et al. (2020): sentences extracted from journal articles, each annotated as "agreeing", "neutral" or "disagreeing" with the statement "Climate change/global warming is a serious concern". The pipeline:
 
-In this section we will see the fundamentals to fine-tuning encoders for a classification task. We will use a dataset introduced by Luo et al., (2020); they collected journal articles, from which they extracted sentences conveying an opinion regarding global warming. Finally, they annotated each opinion as "agreeing", "neutral" or "disagreeing" with regard to the following statement "Climate chage/global warming is a serious concern".
-
-The implementation follows a standard framework including the following steps:
-
-- Load, clean and split your data: clean your texts off of noise and unwanted information and split your dataset into three subsets as described in @sec-classification-task.
-- Choose a model from HuggingFace and load it on a personal computer.
-- Finetune the model using the standard implementation
-- Assess the model performance and update the hyperparameters 
-- Predict the labels of all items using the fine-tuned model
+- Load, clean and split your data into the three subsets from @sec-classification-task.
+- Choose a model from Hugging Face and load it locally.
+- Fine-tune the model.
+- Assess performance and tune hyperparameters.
+- Predict labels for the full dataset.
 
 ## Load and preprocess your data{#sec-preprocess}
 
-Data is available on the [project's GitHub repository](https://github.com/yiweiluo/GWStance/tree/master), we can download it from there using Pandas. 
+Data is available on the [project's GitHub repository](https://github.com/yiweiluo/GWStance/tree/master):
 
 ```python
-import pandas as pd 
+import pandas as pd
 
 url = "https://raw.githubusercontent.com/yiweiluo/GWStance/refs/heads/master/3_stance_detection/1_MTurk/full_annotations.tsv"
 df_raw = pd.read_csv(url, sep = "\t") # Careful here, this document is a tsv (separator="\t" and not a csv, separator = ",")
@@ -215,26 +158,13 @@ df_raw.head()
 |  1 | neutral     |       0.375 | Alarming levels of sea level rise are predicted to threaten Florida over the next decades.                                                           | neutral    | neutral    | s1        | ... |
 |  3 | agrees      |       1     | Global warming is happening and it will be dangerous to human health and welfare.                                                                    | agrees     | agrees     | s3        | ... |
 
+The columns that matter: `sentence` (the text to annotate), `MACE_pred` (the debiased final label, built from several MTurk workers' annotations via the MACE framework), and `av_rating` (their average rating). `worker_#N` holds individual annotations; `disagree`/`agree`/`neutral`/`round`/`batch` are empty or irrelevant here. `sent_id` is not unique.
 
-We will first need to explore the dataset and get a graps of its content as well as possible biases. 
-
-As a first step, let's make a list of all the columns: 
-
-- `sent_id`: the sentence id. It is not unique and represents something else, we will need to create a different ID.
-- `sentence`: the sentence to annotate.
-- `worker_#N` $N\in [1,7]$: The team tasked MTurk workers to label the data for them. Each column concatenates the labels for a given worker.
-- `MACE_pred`: this is the final prediction. The team used the MACE framework to create a debiased label from the workers' labels.
-- `av_rating`: The mean of all workers' annotations for a given sentence (with disagree = 1, neutral = 0, agree = 1).
-
-Other columns include `disagree`, `agree` and `neutral` but they are empty. The `round` and `batch` columns are irrelevant for our experiment.
-
-```python 
+```python
 df = df_raw.loc[:,["sent_id", "sentence", "MACE_pred", "av_rating"]]
 df = df.rename(columns={"MACE_pred" : "label_text"}) # Rename MACE_pred for conveniency
 df
 ```
-
-Let's have a look at the number of elements per class:
 
 ```python
 df.groupby(["label_text"]).size()
@@ -248,29 +178,17 @@ neutral      988
 dtype: int64
 ```
 
-We can see that there tends to be more "neutral" or "agrees" sentences. This means that "disagrees" sentences might be trickier to spot because there will be less elements to train on.
-<!-- TODO balance dataset -->
+Classes are imbalanced — "disagrees" has about half as many examples, which will make it harder to classify well.
 
-The preprocessing step is one of the most important step in the NLP pipeline, one needs to know what the corpus contains. We list a number of aspects you want to keep in mind when pre-processing your data:
+A few preprocessing essentials:
 
-**Create a unique ID for each text**
+**A unique ID**, since `sent_id` isn't one:
 
-Creating an index for each text ensures that you will be able to aggregate the results. If your dataset does not contain an existing ID column, you can create one using the syntax of your choice. In our case, we will create an index that will look like this: `ID-0001`.
-
-```python 
+```python
 df["ID"] = [f'ID-{i:04}' for i in range(len(df))]
 ```
 
-**The length of your documents**
-
-Assessing the length of your documents is crucial for two reasons: 
-
-- Firstly, as mentionned in @sec-encoders, we must check that the length of the documents are compatible with the chosen model's context window size [^preprocess-choose-model]. Also you will need to answer this question: "Where is the information that you're looking for?". For some tasks, you might want to work at the sentence level because you want to find specific elements of your corpus. For other tasks, working at the document or paragraph level is acceptable because you want to assess a global quantity
-- Secondly, we need to make sure that models have roughly the same size to spot obvious issues (empty texts for instance) and ensure that we are not comparing documents of 5 words with 2 pages long documents.
-
-[^preprocess-choose-model]: Here we mention how the chose model impacts the preprocessing of the texts whereas we have not chosen a model yet. This is a good example of how non-linear pipelines are, there are many back and forths stressing the need for a well documented pipeline.
-
-Let's analyse the len of sentences :
+**Document length** — check it fits the model's context window (@sec-encoders), and catch obvious issues such as empty texts:
 
 ```python
 df["sentence-len"] = df["sentence"].apply(len)
@@ -278,7 +196,7 @@ df["sentence-len"].hist()
 df["sentence-len"].describe()
 ```
 
-```txt 
+```txt
 count    2300.000000
 mean      109.890435
 std        56.251317
@@ -292,18 +210,13 @@ Name: sentence-len, dtype: float64
 
 ![Sentence length](./assets/sentence-length.png){#fig-sentence-length-hist width=50%}
 
+These sentences are short and fairly uniform in length, so we won't filter on it. Performance is not guaranteed for texts very different in length, tone or source from the training data.
 
-In the context of our experiment, the sentences are quite short and their size is roughly standard. We will not exclude text inputs based on their length. Keep in mind that this model will be trained on a specific task and specific material. Performances are not guaranteed for texts too different in tone, source, date, or length from the training data.
+**Unwanted characters** — unlike TF-IDF, transformer models are trained on punctuation and benefit from keeping it; strip only what carries no semantic value for your task (e.g. emojis, if your model doesn't recognise them[^recognise-emojis]). Here we just fix some punctuation irregularities:
 
-**Are there any unwanted characters**
+[^recognise-emojis]: Check that the model you're using recognises emojis before deciding to keep or strip them.
 
-If you are used to [TF-IDF techniques](XXX), you might be accoustumed to filtering punctuations and stop words. This is not something that we want to do when using transformers models. Indeed these models are trained with these characters and they convey meaningful context to the model. However, you might want to filter out elements that, for your study, do not carry semantic value. For instance, when working on social media content, depending on your analysis, you will want to either keep or remove emojis for instance[^recognise-emojis]. At the end of the day, you want to make sure that the elements you keep in your text carry semantic information useful for annotating.
-
-[^recognise-emojis]: You need to ensure that the model you are using recognises emojis.
-
-Our corpus is relatively clean given that the preprocessing stage happened at an earlier stage of the study. Skimming through the text entries, we can still find some irregularities regarding the punctuation. Let's fix these: 
-
-```python 
+```python
 def preprocess_text(text: str):
     if not(isinstance(text, str)):
         return pd.NA
@@ -322,30 +235,28 @@ def preprocess_text(text: str):
 df["sentence-preprocessed"] = df["sentence"].apply(preprocess_text)
 ```
 
-**Are there any duplicates?** 
+**Duplicates**, which can bias training by over-weighting repeated examples:
 
-This can be a fatal flaw as training a model with repeated elements can outweight other annotation or completely confuse it. Let's see if we have duplicates: 
-
-```python 
+```python
 df.groupby("sentence").size().value_counts()
 ```
 
-```txt 
+```txt
 1     2034
 2        8
 50       5
 Name: count, dtype: int64
 ```
 
-We can see that 5 elements are duplicated 50 times. Further investigations let us identify that sentences with indices starting with an "s" (`['s0', 's1', 's2', 's3', 's4']`) are duplicated 50 times. Let's remove these rows.
+5 sentences are duplicated 50 times each — all with `sent_id` starting in "s":
 
-```python 
-df_no_duplicates = df.loc[~df["sent_id"].str.startswith("s"), :] 
+```python
+df_no_duplicates = df.loc[~df["sent_id"].str.startswith("s"), :]
 ```
 
-We still need to deal with the 8 elements that have a duplicate. For conciseness' sake we document this step in the [appendices of this tutorial](./appendices.qmd#sec-duplicates). You can run the lines yourself of load the checkpoint:
+The remaining 8 duplicates are handled in the [appendices](./appendices.qmd#sec-duplicates); load the result directly:
 
-```python 
+```python
 df_clean = pd.read_csv("./data/dataset-no-duplicates.csv")
 df_clean
 ```
@@ -356,43 +267,9 @@ df_clean
 |  1 | t1        | We will continue to ... | neutral      |       0     | ID-0006 |             94 | We will continue to ... |
 |  3 | t11       | Claims of global war... | disagrees    |      -1     | ID-0008 |             55 | Claims of global war... |
 
+**Splitting the data**, as in @sec-classification-task, into train (70%), dev (15%) and test (15%):
 
-:::{.callout-warning}
-[ES: C'est vraiment la règle à suivre ? On garde des éléments identiques avec des annotations discordantes ? Question de curiosité; AM: Il vaut mieux éviter les doublons oui, sinon tu créé du bruit ou tu suraligne avec une phrase. Je pense que c'est pas critique mais je trouvais ça important de s'y arrêter. Opinions?]
-:::
-
-**Summary and the key ideas behind these preprocessing steps**
-
-We have listed a limited number of preprocessings that you can perform. The first key idea behind these is to ensure that your documents will be read by the model and that the information will not be diluted in noise. To further ensure this, please refer to the model's documentation. 
-
-:::{.callout-warning}
-AM: I want to introduce the idea of bias, but i'm not sure it's the right time / right way. Opinions ?
-
-```python 
-df["sentence-len"] = df["sentence"].apply(len)
-df.hist(column = "sentence-len", by="label_text")
-df.groupby("label_text")["sentence-len"].describe()
-```
-
-| label_text   |   count |     mean |     std |   min |   25% |   50% |   75% |   max |
-|:-------------|--------:|---------:|--------:|------:|------:|------:|------:|------:|
-| agrees       |     871 | 114.91   | 56.0082 |    22 |    77 |   100 |   148 |   342 |
-| disagrees    |     441 |  98.0907 | 59.0937 |    22 |    51 |    86 |   134 |   325 |
-| neutral      |     988 | 110.732  | 54.4368 |    21 |    72 |   104 |   148 |   347 |
-
-![Length of text per label](./assets/len-label.png)
-
-We can see that sentences are short, with similar length distributions across the "agrees" annotated items and "neutral" annotated items. On the other hand, "disagrees" annotated items seem to be shorter on average. This can be problematic if the gap is too large because you want to preserve some coherence between the texts. Also, automatic annotation algorithms exploit significant differences between items; at this point we do not know if the length if the texts is a difference to exploit or normalise.
-
-:::
-
-Another key idea is to ensure sufficient homogeneity. Indeed, to perform the classification, an algorithm will exploit the differences between the texts with different labels. If texts of a certain class are longer than others, the algorithm might use this information to tell the difference. Depending on your research question, this might be a good thing or not. 
-
-**Final step: Create splits**
-
-As described in @sec-classification-task, we need to split the availables annotations into three sets: train, dev and test. In general, we allocate 70% of the data to the train set, then 15% to dev set and test eval set. Depending on the size of your dataset, you might want to tweak this distribution. Ultimately, you want enough data for training and evaluation for scores to be significative.
-
-```python 
+```python
 from datasets import Dataset, DatasetDict
 ds = Dataset.from_pandas(df_no_duplicates)
 
@@ -412,48 +289,44 @@ dsd = DatasetDict({
 ```
 DatasetDict({
     train: Dataset({
-        features: ['sent_id', 'sentence', 'label_text', 'av_rating', 'ID', 'sentence-len', 
+        features: ['sent_id', 'sentence', 'label_text', 'av_rating', 'ID', 'sentence-len',
         'sentence-preprocessed', '__index_level_0__'],
         num_rows: 1428
     })
     dev: Dataset({
-        features: ['sent_id', 'sentence', 'label_text', 'av_rating', 'ID', 'sentence-len', 
+        features: ['sent_id', 'sentence', 'label_text', 'av_rating', 'ID', 'sentence-len',
         'sentence-preprocessed', '__index_level_0__'],
         num_rows: 306
     })
     test: Dataset({
-        features: ['sent_id', 'sentence', 'label_text', 'av_rating', 'ID', 'sentence-len', 
+        features: ['sent_id', 'sentence', 'label_text', 'av_rating', 'ID', 'sentence-len',
         'sentence-preprocessed', '__index_level_0__'],
         num_rows: 307
     })
 })
 ```
 
-:::{.callout-warning}
-[ES: la terminologie est différente de ActiveTigger, sur quoi on se base pour ne pas avoir eval / test ? JE pense que ça doit être cohérent entre nos outils et nos leçons non ? AM: Je suis d'accord. Cependant la terminologie a souvent été confuse pour certaines personnes. Est ce que ça vaudrait pas le coup de réfléchir à une terminologie claire et mettre à jour ce tuto ET AT?]
-:::
+## Choose and load a model{#choose-and-load-a-model}
 
-## Choose and load a model
+We use the Transformers package, maintained by [Hugging Face](https://huggingface.co/)[^huggingface], and start with [google-bert/bert-base-uncased](https://huggingface.co/google-bert/bert-base-uncased).
 
-In this tutorial we use the Transformers package, maintained by [HuggingFace](https://huggingface.co/)[^huggingface]. They propose a range of open source models and datasets downlable through their API. In the context of this tutorial, we will start working with the famous BERT model named: [google-bert/bert-base-uncased](https://huggingface.co/google-bert/bert-base-uncased)
-
-[^huggingface]: HuggingFace is a company for profit specialised in NLP and machine learning. They maintain many SOTA libraries such as [Transformers](https://huggingface.co/docs/transformers/index), [Datasets](https://huggingface.co/docs/datasets/index) or [Sentence Transormers](https://sbert.net/). On top of maintaining the libraries, they publish posts about the latest tech, tutorials on their libraries, host a forum for debugging but also propose inference and training solutions if you don't have access the required hardware.
+[^huggingface]: Hugging Face maintains several widely used libraries — [Transformers](https://huggingface.co/docs/transformers/index), [Datasets](https://huggingface.co/docs/datasets/index), [Sentence Transformers](https://sbert.net/) — publishes tutorials, hosts a debugging forum, and offers inference/training infrastructure if you lack the hardware.
 
 :::{.callout-note title="How to choose a model" collapse="true"}
-Models and their performance are highly sensitive to the task and context of use. When implementing an NLP task you might want to try several models to compare their performance. When choosing a model you want to take into account the following parameters: 
+Model performance is sensitive to task and context — try several and compare. Criteria to weigh:
 
-- What task was the model trained for? You can see the list of tasks when [browsing HuggingFace's models](https://huggingface.co/models). In the context of this tutorial, we want to perform a **Text Classification** task. 
-- What language was the model trained on? This one is trivial. However, depending on your corpus, you might want to find models that are multilingual. Performance of multilingual models can be below monolingual models; consider trying different models (is it still true ?? @ Léo). You can also try and translate your corpus into one language and use a monolingual model. 
-- What documents was the model trained on? Evaluated on? Models performance can vary a lot when used on a certain domain or another. Make sure to use models that have been XXX BENCSSMARK @ Etienne @ Paul 
-- Is the model still relevant? Look at the number of downloads on the model's page; this can give you a sense of the model's popularity and (to some extent) performance. If downloads have dropped, this can be a sign that a newer version was published or that another model has become the new standard.
-- Last but not least: How big is the model? You won't get away with it, your laptop has limited computation capabilities, large models need appropriate hardware. Know your hardware and check what model you can run [using this method](XXX). <!-- TODO find a method lols -->
+- **Task**: browse [Hugging Face's models](https://huggingface.co/models) by task; here, **Text Classification**.
+- **Language**: multilingual models can underperform monolingual ones on a single-language corpus; consider a monolingual model, or translating your corpus first.
+- **Training/evaluation domain**: performance varies by domain — check the model's documentation for benchmarks close to yours.
+- **Relevance**: download counts are a rough proxy for popularity and (to some extent) performance; a drop can signal a newer model has taken over.
+- **Size**: your hardware sets a hard ceiling — know it, and check what you can run given it.
 :::
 
-To load the model we just need to use one of the AutoModel instance[^auto-models]. In our case we are going to use the [`AutoModelForSequenceClassification`](https://huggingface.co/docs/transformers/en/model_doc/auto#transformers.AutoModelForSequenceClassification). To load the model we use the following command: 
+We load it with an AutoModel class[^auto-models], here [`AutoModelForSequenceClassification`](https://huggingface.co/docs/transformers/en/model_doc/auto#transformers.AutoModelForSequenceClassification):
 
-[^auto-models]: Auto Classes are ready-to-use classes that will set up the right architecture depending on your task. 
+[^auto-models]: Auto classes are ready-to-use classes that set up the right architecture for your task.
 
-```python 
+```python
 from transformers import AutoModelForSequenceClassification
 
 labels = list(df["label_text"].unique())
@@ -470,25 +343,23 @@ model = AutoModelForSequenceClassification.from_pretrained(
 )
 ```
 :::{.callout-warning}
-Nota: for some models you might need to set `trust_remote_code` to `True`. _Make sure you actually trust the model you are downloading._
-::: 
+Note: some models require `trust_remote_code=True`. Make sure you actually trust the model you're downloading before setting it.
+:::
 
 :::{.callout-note title="Model description" collapse="true" #nte-model-description}
-We can easily observe the general architecture of the model by typing: 
+Inspect the architecture directly:
 
 ```python
 print(model)
 ```
 
-```txt 
+```txt
 BertForSequenceClassification(
   (bert): BertModel(
-    
-    >>> This is the first step of the encoding process, use ready made embeddings 
-    that will be modified with attention. We can find useful information: 
-    - 30522 is the vocab size, there are 30522 entities for which there is a ready 
-    made embedding.
-    - 768 is the dimension of the output embeddings
+
+    >>> First step of the encoding process: ready-made embeddings that attention
+    will modify. 30522 is the vocab size (one ready-made embedding per entry);
+    768 is the output embedding dimension.
 
     (embeddings): BertEmbeddings(
       (word_embeddings): Embedding(30522, 768, padding_idx=0)
@@ -498,9 +369,8 @@ BertForSequenceClassification(
       (dropout): Dropout(p=0.1, inplace=False)
     )
 
-    >>> This is where the attention takes place. You can see that the encoder is a
-    stack of 12 BERTlayers, themselves containing a self attention module. We find 
-    again the dimension of the output embeddings: 768
+    >>> Where attention happens: a stack of 12 BertLayers, each with a self-attention
+    module. Output embedding dimension is still 768.
 
     (encoder): BertEncoder(
       (layer): ModuleList(
@@ -531,8 +401,8 @@ BertForSequenceClassification(
       )
     )
 
-    >>> This pooler is the component that will take the embedding of each token in 
-    the sequence and produce a unique embedding, supposedly best representing the sequene.
+    >>> Takes the embedding of each token in the sequence and produces one
+    embedding meant to best represent the whole sequence.
 
     (pooler): BertPooler(
       (dense): Linear(in_features=768, out_features=768, bias=True)
@@ -541,9 +411,8 @@ BertForSequenceClassification(
   )
   (dropout): Dropout(p=0.1, inplace=False)
 
-  >>> This last component is the classifier layer, a neural network composed of 768 
-  + 3 nodes. The out_features=3 corresponds to the number of labels we are using for 
-  annotation! 
+  >>> The classifier layer: a 768 + 3 node network. out_features=3 is the
+  number of labels we're annotating for.
 
   (classifier): Linear(in_features=768, out_features=3, bias=True)
 )
@@ -551,16 +420,16 @@ BertForSequenceClassification(
 
 :::
 
-:::{.callout-note title="Tips and tricks - Read the model configuration" collapse="true"}
+:::{.callout-note title="Tips and tricks — read the model configuration" collapse="true"}
 
-The `AutoConfig` class is very convenient for retrieveing information that may be difficult to obtain otherwise because models' documentation sometimes lack precision. We load it like this: 
+`AutoConfig` surfaces details that model documentation sometimes omits:
 
-```python 
+```python
 from transformers import AutoConfig
 print(AutoConfig.from_pretrained(MODEL_NAME))
 ```
 
-```txt 
+```txt
 BertConfig {
   "architectures": [
     "BertForMaskedLM"
@@ -570,17 +439,17 @@ BertConfig {
   "gradient_checkpointing": false,
   "hidden_act": "gelu",
   "hidden_dropout_prob": 0.1,
-  
-  >>> Embedding dimension 
+
+  >>> Embedding dimension
   "hidden_size": 768,
-  
+
   "initializer_range": 0.02,
   "intermediate_size": 3072,
   "layer_norm_eps": 1e-12,
-  
+
   >>> Maximum context window
   "max_position_embeddings": 512,
-  
+
   "model_type": "bert",
   "num_attention_heads": 12,
   "num_hidden_layers": 12,
@@ -598,57 +467,55 @@ BertConfig {
 
 ## Fine-tune the model
 
-We are finally going to fine-tune the model on our specific data. To do so, we are going to proceed with the 3 following steps:  
-
-- Tokenize the dataset
-- Setup the training arguments
-- Launch training
+Three steps remain: tokenize the dataset, set the training arguments, and launch training.
 
 ### Tokenize the dataset{#sec-tokenization}
 
-Tokenizing consists of two steps, first text patterns are transformed into tokens from the model's vocabulary, then each sentence is truncated or padded so that every entry has the same length. 
+Tokenizing happens in two steps: text is split into tokens from the model's vocabulary, then each sequence is truncated or padded to a fixed length.
 
 :::{.callout-tip title="Example" collapse="true"}
-```python 
+```python
 tokenizer("Hello World! 😇")
 # {'input_ids': [101, 7592, ...], 'token_type_ids': [0, 0, ...], 'attention_mask': [1, 1, ...]}
 tokenizer("Hello World! 😇").input_ids
 # [101, 7592, 2088, 999, 102] <- the token id
 tokenizer.decode([101, 7592, 2088, 999, 100, 102])
-# '[CLS] hello world! [UNK] [SEP]' 
+# '[CLS] hello world! [UNK] [SEP]'
 # [CLS] is the starting token and [SEP] the terminating one.
 # The smiley is marked as unknown [UNK]
 tokenizer.decode([101])
-# '[CLS]' <- token number 101 
+# '[CLS]' <- token number 101
 tokenizer.decode([2088, 999])
 # 'world!' <- tokens number 2088 and 999
 tokenizer(
   [lorem.get_sentence(count=20), # Very long
    lorem.get_sentence(count=2)]  # Very short
-  truncation = True, 
-  padding = "max_length", 
-  max_length = 50, 
+  truncation = True,
+  padding = "max_length",
+  max_length = 50,
   return_tensors = "np"
 ).input_ids.shape
 # (2, 50) <- long entries are truncated and short ones are padded so that all tokenized entries are the same length
 ```
 :::
 
-The tokenizer[^tokens-def] needs to be loaded just as we did with the model: 
+Load the tokenizer[^tokens-def-2] the same way as the model:
 
-```python 
+[^tokens-def-2]: See @sec-encoders for what tokenization is and why it's needed.
+
+```python
 from transformers import AutoTokenizer
 
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 ```
 
-Then choosing the parameters for the tokenizer and writing a preprocessing function: 
+Set the tokenizer's parameters inside a preprocessing function and apply it:
 
-```python 
+```python
 def preprocess_dataset(row: dict):
   tokenized_entry = tokenizer(
     row["sentence-preprocessed"],
-    truncation = True, 
+    truncation = True,
     padding = "max_length",
     max_length = 400,
   )
@@ -683,15 +550,15 @@ DatasetDict({
 })
 ```
 
-The data is ready to be used for Fine-Tuning! 
+The data is ready for fine-tuning.
 
 ### Setup fine-tuning hyperparameters{#sec-training-parameters}
 
-The fine-tuning parameters are stored in the `TrainingArguments`[^training-or-fine-tuning] object. We have selected the main parameters that you'll want to look for during training, but you can browse the [117 parameters it can take](https://huggingface.co/docs/transformers/v4.49.0/en/main_classes/trainer#transformers.TrainingArguments). You'll find more information about what hyperparameters represent and how to tune them in @sec-hyperparameters-tuning.
+Fine-tuning parameters live in the `TrainingArguments`[^training-or-fine-tuning] object — below are the main ones; the full list of [117 parameters](https://huggingface.co/docs/transformers/v4.49.0/en/main_classes/trainer#transformers.TrainingArguments) is in the documentation. What each hyperparameter does, and how to tune it, is covered in @sec-hyperparameters-tuning.
 
-[^training-or-fine-tuning]: The syntax would be the same if you trained a model from scratch, therefore the pipeline uses training related names (Trainer, TrainingArguments, ...), but that does not change the fact that we are indeed *fine-tuning* a model.
+[^training-or-fine-tuning]: The syntax is the same whether training from scratch or fine-tuning, hence the training-related class names (`Trainer`, `TrainingArguments`...) — we are still fine-tuning a pretrained model.
 
-```python 
+```python
 from transformers import TrainingArguments, Trainer
 training_arguments = TrainingArguments(
     # Hyperparameters
@@ -703,8 +570,6 @@ training_arguments = TrainingArguments(
     per_device_train_batch_size = 4,
     per_device_eval_batch_size = 4,
     gradient_accumulation_steps = 8,
-    # Metrics
-    # metric_for_best_model="f1_macro", # TODO implement F1 as metric: MOVE TO EXPERT
     # Pipe
     output_dir = "./models/training",
     eval_strategy = "steps"   , eval_steps    = 0.05,
@@ -719,14 +584,14 @@ training_arguments = TrainingArguments(
 
 ### Launch fine-tuning
 
-Finally, we can start the process, all it takes is 2 more lines of code:
+Two more lines start the process:
 
 ```python
 trainer = Trainer(
-    model = model, 
+    model = model,
     args = training_arguments,
     train_dataset=dsd["train"],
-    eval_dataset=dsd["train_eval"],
+    eval_dataset=dsd["dev"],
 )
 
 trainer.train()
@@ -743,48 +608,43 @@ trainer.train()
 |  3.684  |    133 |           1.826 |            0.9477 |
 |  4.211  |    152 |           1.622 |            0.9651 |
 |  4.737  |    171 |           1.05  |            1.1    |
-|  5.0    |    190 |           1.09  |            1.14   | <!-- this line is made up do we want to keep it?? -->
+|  5.0    |    190 |           1.09  |            1.14   |
 
-<!-- TODO SETUP F1 macro as metric -->
-
-<!-- TODO add training table -->
-
-As a result you will get get a list of folders[^save-strategy], each containing the following files: 
+This produces a list of folders[^save-strategy], each holding:
 
 [^save-strategy]: Depending on the `save_strategy` you set.
 
-- `config.json`: a dictionnary with the config, similar to `AutoConfig`.
-- `model.safetensors`: a file containing all the weights of the Model.
-- `optimizer.pt`, `rng_state.pth` and `scheduler.pt`: a copy of the optimizer, rng_state and scheduler used during training. 
-- `trainer_state.json`: a dictionnary containing all metadata up to the current checkpoint.
+- `config.json`: the model config, similar to `AutoConfig`.
+- `model.safetensors`: all model weights.
+- `optimizer.pt`, `rng_state.pth`, `scheduler.pt`: the optimizer, RNG state and scheduler at that point.
+- `trainer_state.json`: metadata up to that checkpoint.
 - `training_args.bin`: a copy of the training arguments.
 
-The model can be loaded like before: 
+Reload a checkpoint the same way as the original model:
 
-```python 
+```python
 reload_model = AutoModelForSequenceClassification.from_pretrained(
     "./models/training/checkpoint-76")
 ```
 
-It is worth noting that the trainer output also contains the best training checkpoint `trainer.state.best_model_checkpoint`. In our case, the best checkpoint is the checkpoint number 38`'./models/training/checkpoint-76'` the evaluation loss reaches a minimum (0.81) for this checkpoint.
+`trainer.state.best_model_checkpoint` holds the best one — here, checkpoint 38 (`'./models/training/checkpoint-76'`), where evaluation loss reaches its minimum (0.81).
 
 ## Use model for inference and evaluate performance{#sec-evaluation}
 
-To evaluate the performance, we use the dev set (see @sec-preprocess) gold standard annotations and predicted ones, then compute the metrics introduced in @sec-classification-task: Accuracy, Precision, Recall and F1-score. Therefore the first step is to predict the labels on the dev set: 
+We predict labels on the dev set (@sec-preprocess), then compare against the gold annotations using the metrics from @sec-classification-task: accuracy, precision, recall, F1.
 
-<!-- TODO s'assurer que ça ça fonctionne sur CPU -->
 ::::{.columns}
 :::{.column-body}
-```python 
+```python
 IDs = []
 y_gold = []
 y_pred = []
 
-# Reload the best model: 
+# Reload the best model:
 model = AutoModelForSequenceClassification.from_pretrained(trainer.state.best_model_checkpoint)
 model.eval()
 
-for batch in tqdm(dsd["dev"].batch(8)): 
+for batch in tqdm(dsd["dev"].batch(8)):
   IDs += [batch["ID"]]
   y_gold += [batch["labels"]]
   with torch.no_grad():
@@ -799,19 +659,18 @@ results = pd.DataFrame({
 :::
 
 :::{.callout-note}
-If you want to develop your understanding of the objects we manipulate, we provide a setp by step description in the [appendices](./appendices.qmd#sec-ins-and-outs)
+A step-by-step breakdown of these objects is in the [appendices](./appendices.qmd#sec-ins-and-outs).
 :::
 :::{.column-margin}
-Note that this code snippet will only run if the model is loaded on your CPU. See @sec-GPU for device discussions.
+This snippet assumes the model is on CPU. See @sec-GPU for GPU/MPS.
 :::
 ::::
 
-Then, once we have the predictions, we can compute the metrics. In general, we recommand using the macro[^macro-def] F1 as it is the most representative of the model performance and works well with unbalanced datasets. Either way, you can use [`scikit-learn`'s `classification_report` function](https://scikit-learn.org/stable/modules/model_evaluation.html#classification-metrics) to compute all metrics at once : 
+We recommend macro[^macro-def] F1 as the most representative single number, since it handles class imbalance well. `scikit-learn`'s [`classification_report`](https://scikit-learn.org/stable/modules/model_evaluation.html#classification-metrics) computes everything at once:
 
-[^macro-def]: "macro" means that the evaluation normalises for the number of labels. Example in [the appendices](./appendices.qmd#sec-macro-micro).
+[^macro-def]: "Macro" means the evaluation normalises across labels. Example in [the appendices](./appendices.qmd#sec-macro-micro).
 
-
-```python 
+```python
 from sklearn.metrics import classification_report
 
 print(classification_report(
@@ -831,31 +690,31 @@ print(classification_report(
 weighted avg       0.67      0.66      0.65       306
 ```
 
-Here we can see that the model's performance for the labels "agrees" and "neutral" is decent, but would benefit from further hyperparameter tuning. On the other hand, the model does not recognise the "disagrees" label. All in all, the current finetuning leads to mediocre results. In @sec-advanced, we will tweak the hyperparameters to reach better results. 
+Performance on "agrees" and "neutral" is decent but would benefit from further tuning; "disagrees" is barely recognised. Overall, this run is mediocre — @sec-advanced tunes the hyperparameters to do better.
 
+### What's a good score?
+
+There's no universal "good enough" threshold — it depends on the task. Compare against these instead of judging the raw number alone:
+
+- **A trivial baseline**: how would always predicting the majority class, or guessing at random, score? Barely beating that means the model hasn't learned much.
+- **Human agreement**: inter-annotator agreement from your own annotation process (e.g. two coders on a shared sample) is a realistic ceiling — texts humans disagree on, the model won't reliably get right either. Approaching that agreement is about as good as it practically gets.
+- **Intended use**: an exploratory, descriptive use (e.g. roughly characterising prevalence over time) tolerates more noise than a causal claim, where misclassified items can bias conclusions in a specific direction.
+
+As a rough rule of thumb, macro F1 in the 0.7–0.9 range is typical for a usable social science classifier — but validate against the criteria above, not the number alone.
 
 ## Conclusion{#sec-essentials-conclusion}
 
-In this section we have covered the basics to load the data and model, launch the fine-tuning and evaluate performances. We discussed: 
-
-- The importance of knowing your corpus and preprocessing the texts depending on your research question.
-- How to choose a model depending on the task.
-- Prepare the data for fine-tuning (tokenization and formatting) and set the hyperparameters.
-- Launch the fine-tuning process.
-- Use the model for inference and evaluate the model using classification metrics.
-
-You now have all the technical knowledge necessary to fine-tune most classification models using the HuggingFace `AutoModelForSequenceClassification` pipeline. However, in the @sec-evaluation, we saw that the performance were not optimal. In the following section, we will explore other model outputs to gain further insights and modify the hyperparameters to reach better performances. Also, the pipeline did not make use of more advanced hardware such as GPUs and Apple MX chips, we will discuss how to adapt the code accordingly.
+This section covered: knowing your corpus and preprocessing accordingly, choosing a model for the task, preparing data for fine-tuning, launching it, and evaluating with classification metrics. That's enough to fine-tune most classification models with Hugging Face's `AutoModelForSequenceClassification` pipeline — but @sec-evaluation showed mediocre performance. @sec-advanced tunes the hyperparameters to improve it and covers GPU/MPS, which this pipeline didn't use.
 
 # Training pipeline: advanced practices{#sec-advanced}
 
 ## Diagnose and fix training problems{#sec-hyperparameters-tuning}
 
-In @sec-essentials we fine-tuned a BERT model and saved checkpoints containing crucial information; one of them is the learning curve. The learning curve tracks the loss function[^lossFunction] — a measure of the distance between the predicted labels and the gold standard labels — on the train set and the dev set as training progresses. We can retrieve it from the logs in `trainer_state.json` and plot it:
+Checkpoints from @sec-essentials include the learning curve: the loss function[^lossFunction] — the distance between predicted and gold labels — tracked on the train and dev sets as training progresses. Retrieve it from `trainer_state.json` and plot it:
 
-[^lossFunction]: The loss function is a function measuring the distance between the predicted labels and the gold standard labels.
+[^lossFunction]: The loss function measures the distance between predicted and gold labels.
 
 ```python
-# TODO update and make it simpler
 import json
 import plotly.express as px
 
@@ -871,7 +730,6 @@ for log in training_state ["log_history"]:
     elif "eval_loss" in log:
         loss += [{"step": step, "loss": log["eval_loss"], "split": "eval"}]
     else:
-        # thweird
         print(log)
 
 loss = pd.DataFrame(loss)
@@ -881,19 +739,19 @@ px.line(loss, x = "step", y = "loss", color =  "split")
 
 ![Learning curve](./assets/learning_curve.png){#fig-learning-curve width=70%}
 
-The train loss decreases steadily towards 0, while the dev loss decreases, reaches a minimum, then rises again. That rise is expected: it simply means the model keeps memorising the train set past the point where it stopped generalising better, which is why we reload the checkpoint at the minimum (@sec-evaluation) rather than the last one. What matters is how low that minimum is, and how the two curves sit relative to each other. Here is the pattern to aim for:
+Train loss decreases steadily towards 0, while dev loss decreases, reaches a minimum, then rises — the model is memorising the train set past the point where it stopped generalising better, which is why we reload the checkpoint at the minimum (@sec-evaluation), not the last one. What matters is how low that minimum is, and how the two curves sit relative to each other. The pattern to aim for:
 
 ::::{.columns}
 
 :::{.column width=50%}
 
-**The perfect case scenario**
+**The perfect case**
 
-- Both curves went down during training: the model has learned
-- Both curves have the same loss values: no overfitting
-- The curves are flat at the end: nothing more to be learned, apparently
+- Both curves went down: the model learned.
+- Both curves sit at similar values: no overfitting.
+- Both are flat at the end: nothing more to learn.
 
-Once your learning curve looks like this, you only have to look at the evaluation metrics to see if you are satisfied with the prediction quality. If it does not, one of the problems below is likely the cause — each comes with the hyperparameters that fix it.
+Once your curve looks like this, check the evaluation metrics for prediction quality. If it doesn't, one of the problems below is the likely cause — each comes with the hyperparameters that fix it.
 
 :::
 
@@ -904,8 +762,6 @@ Once your learning curve looks like this, you only have to look at the evaluatio
 :::
 
 ::::
-
-To follow the rest of this section, one mental image is enough. Fine-tuning proceeds by small successive corrections: the model reads a **batch** of annotated texts, compares its predictions with your annotations, and adjusts its parameters slightly in the direction that reduces the gap. It then moves on to the next batch, and repeats until it has gone through the entire training set — that is one **epoch**. The hyperparameters below govern *how many* texts the model reads before each correction, *how large* each correction is, and *how many times* the model goes through your data.
 
 **Problem 1: the model hasn't learned enough**
 
@@ -925,60 +781,60 @@ To follow the rest of this section, one mental image is enough. Fine-tuning proc
 
 ::::
 
-At one extreme, both curves stay flat throughout training (left): the metrics are barely better than chance, and the losses have hardly moved — the corrections applied to the model were either too small to have any effect, or too few. At the other extreme, both curves are still going down together with no plateau in sight (right): the model is learning correctly, it simply hasn't finished.
+At one extreme, both curves stay flat (left): metrics are barely better than chance, and the corrections were too small or too few. At the other, both curves are still falling with no plateau (right): the model is learning correctly, just not finished.
 
-- The **learning rate** 🟢🟢🟢 _(importance)_ sets the size of each correction. It is by far the most consequential hyperparameter: set too low, the fine-tuning leaves the model essentially unchanged. Try increasing it. Typical values: $[1e-6, 1e-4]$.
-- The **number of epochs** 🟢 sets how many times the model goes through your training set. If performance was still improving when training stopped, the model simply did not get enough passes over your data. Typical values: 3-5, bearing in mind that each additional epoch costs computation time.
+- **Learning rate** 🟢🟢🟢 _(importance)_ sets the size of each correction — the most consequential hyperparameter. Too low, fine-tuning leaves the model essentially unchanged; try increasing it. Typical values: $[1e-6, 1e-4]$.
+- **Number of epochs** 🟢 sets how many passes through the training set. If performance was still improving when training stopped, add more. Typical values: 3-5 (more costs more compute time).
 
 **Problem 2: the model has learned your training set by heart**
 
 ![Overfitting](./assets/bertrain-overfit.png){width=50%}
 
-The model performs very well on the texts it was trained on, and noticeably worse on the dev set: both curves went down, but the train curve sits much lower than the dev curve. It has memorised your training examples instead of learning the distinction you are after. This is called **overfitting**, and it is the most common failure in this kind of project, particularly when annotations are few.
+The model performs well on texts it trained on and noticeably worse on dev: both curves fell, but train sits much lower than dev. It has memorised the training examples instead of learning the underlying distinction — **overfitting**, the most common failure here, especially with few annotations.
 
-- The **weight decay**[^alias-weight-decay] 🟢🟢 discourages the model from adopting extreme parameter values, which is the mechanism through which memorisation usually happens. Increasing it constrains the model and pushes it towards more general solutions; setting it too high prevents it from learning at all. Typical values: 0.01-0.1.
-- Lowering the **learning rate** or the **number of epochs** works towards the same end: fewer and gentler corrections leave the model less opportunity to fit the specifics of your examples.
-- The most reliable remedy, however, is not a hyperparameter: annotate more data.
+- **Weight decay**[^alias-weight-decay] 🟢🟢 discourages extreme parameter values, the usual mechanism behind memorisation. Increasing it constrains the model toward more general solutions; too high and it can't learn at all. Typical values: 0.01-0.1.
+- Lowering the **learning rate** or **epochs** works the same way: fewer, gentler corrections leave less room to fit the specifics of your examples.
+- The most reliable fix isn't a hyperparameter: annotate more data.
 
 **Problem 3: the fine-tuning is erratic**
 
 ![Erratic training](./assets/bertrain-chaos.png){width=50%}
 
-Performance jumps up and down from one evaluation to the next instead of improving steadily. The corrections are being computed on too little evidence at a time, so each one chases the peculiarities of a handful of texts rather than a general pattern.
+Performance swings between evaluations instead of improving steadily: corrections are computed on too little evidence at a time, each chasing the quirks of a handful of texts rather than a general pattern.
 
-- The **batch size** 🟢🟢 is the number of texts the model reads before each correction. The larger the batch, the more each correction reflects a general tendency of your corpus rather than the noise of a few individual texts. Typical values: 16-64.
-- A learning rate set too high produces the same symptom for a different reason: each correction overshoots. If enlarging the batch is not enough, lower the learning rate.
+- **Batch size** 🟢🟢 is how many texts the model reads before each correction. Larger batches reflect the corpus's general tendency rather than individual noise. Typical values: 16-64.
+- A learning rate set too high causes the same symptom for a different reason — each correction overshoots. Lower it if enlarging the batch isn't enough.
 
 **Problem 4: the fine-tuning does not fit on your machine**
 
-This one does not show up on the learning curve: large batches are desirable, but the whole batch must be held in memory at once, and this is usually where a personal computer gives up (see @sec-GPU). The way around it is to accumulate several small batches before applying a correction, which is almost equivalent and requires far less memory:
+This doesn't show up on the learning curve: a large batch must be held in memory at once, which is usually where a personal computer gives up (@sec-GPU). Accumulate several small batches before applying a correction instead — nearly equivalent, far less memory:
 
 $$\text{Batch size} = \text{Device batch size} \times \text{Gradient accumulation steps}$$
 
-- The **device batch size** is what your hardware actually processes at once: lower it until the training fits in memory.
-- The **gradient accumulation steps** compensates, so that the effective batch size stays in the range you wanted.
+- **Device batch size** is what your hardware actually processes at once: lower it until training fits in memory.
+- **Gradient accumulation steps** compensates, keeping the effective batch size where you wanted it.
 
-Disk space calls for the same kind of attention. The **eval** and **save strategies** 🔴 can be set to `"epoch"` or `"steps"`; with `"steps"`, the `eval_steps` and `save_steps` parameters control how often the model is evaluated and saved. Since each checkpoint can weigh several gigabytes, use `save_total_limit`[^note-save-total-limit] to cap the number of checkpoints kept on disk.
+Disk space needs the same care. **Eval** and **save strategies** 🔴 can be `"epoch"` or `"steps"`; with `"steps"`, `eval_steps` and `save_steps` set how often the model is evaluated and saved. Checkpoints can weigh several gigabytes, so cap how many are kept with `save_total_limit`[^note-save-total-limit].
 
 :::{.callout-tip title="Where to start"}
-If you only change one hyperparameter, change the learning rate. A reasonable strategy is to keep everything else at the values used in @sec-training-parameters, try a few learning rates spanning the typical range (for instance 1e-5, 3e-5 and 5e-5), and compare the resulting learning curves. Only then is it worth tuning the weight decay and the batch size. Remember that these choices must be made by comparing performance on the **dev** set, never on the test set (@sec-classification-task).
+Change the learning rate first. Keep everything else at the values from @sec-training-parameters, try a few learning rates spanning the typical range (e.g. 1e-5, 3e-5, 5e-5), and compare the resulting curves. Only then tune weight decay and batch size — and always compare on the **dev** set, never the test set (@sec-classification-task).
 :::
 
-[^alias-weight-decay]: AKA: L2-regularization.
+[^alias-weight-decay]: Also known as L2 regularisation.
 
-[^note-save-total-limit]: If you use `load_best_model_at_end=True`, make sure to have `save_total_limit` > 2, otherwise the best model will be overwritten by the last model ([documentation](https://huggingface.co/docs/transformers/main_classes/trainer#transformers.TrainingArguments.save_total_limit)).
+[^note-save-total-limit]: With `load_best_model_at_end=True`, set `save_total_limit` > 2, or the best model gets overwritten by the last one ([documentation](https://huggingface.co/docs/transformers/main_classes/trainer#transformers.TrainingArguments.save_total_limit)).
 
 ## Use GPU for faster training{#sec-GPU}
 
-This section is only useful if you have access to a GPU; if you don't, training on CPU works exactly as shown earlier, just slower, and you can skip ahead to @sec-errors. If you have a NVIDIA GPU[^2] and have set up your cuda[^3] environment, or a Mac with an MX chip, you can accelerate training with cuda or mps respectively.
+Only relevant if you have a GPU — otherwise training on CPU works exactly as shown, just slower; skip ahead to @sec-errors. An NVIDIA GPU[^2] with cuda set up, or a Mac with an MX chip, accelerates training via cuda or mps respectively.
 
-[^2]: [AMD GPUs do not have access to cuda](https://www.tutorialpedia.org/blog/is-it-possible-to-run-cuda-on-amd-gpus/#2-closed-source-ecosystem) but you can work you way out with alternative solutions like [ZLuda](https://github.com/vosen/ZLUDA)
+[^2]: [AMD GPUs don't support cuda](https://www.tutorialpedia.org/blog/is-it-possible-to-run-cuda-on-amd-gpus/#2-closed-source-ecosystem), though alternatives like [ZLUDA](https://github.com/vosen/ZLUDA) exist.
 
-[^3]: [What is cuda in 3 mins](https://www.youtube.com/watch?v=pPStdjuYzSI); [Install cuda on your machine](https://developer.nvidia.com/cuda-downloads)
+[^3]: [What is cuda in 3 minutes](https://www.youtube.com/watch?v=pPStdjuYzSI); [install cuda](https://developer.nvidia.com/cuda-downloads).
 
-You can check if your environment is ready to use cuda and mps with the following lines: 
+Check whether cuda/mps are available[^3]:
 
-```python 
+```python
 from torch.cuda import is_available as cuda_available
 from torch.mps import is_available as mps_available
 
@@ -986,9 +842,9 @@ print("CUDA: ", cuda_available())
 print("MPS: ", mps_available())
 ```
 
-From there on, you will need to be aware of where your objects are stored. Indeed, in order to use the model on CUDA (or MPS), the input and the model need to be stored on the same hardware. The code for finetuning changes slightly: 
+The model and its inputs must live on the same device, so the fine-tuning code changes slightly:
 
-```python 
+```python
 # Choose your device
 DEVICE = "cuda" # or "mps", or "cpu"
 
@@ -1004,16 +860,16 @@ model = model.to(device = DEVICE)
 # You can check the model device :
 print(model.device)
 
-# Load the training arguments: 
+# Load the training arguments:
 training_args = TrainingArguments(
   ...
-  bf16= str(device) == "cuda", 
+  bf16= str(device) == "cuda",
 )
 
 # Set up the trainer and launch the processing
 ```
 
-The code for using the model for inference changes as well: 
+Inference changes too:
 
 ```python
 from torch import no_grad
@@ -1021,13 +877,13 @@ IDs = []
 y_gold = []
 y_pred = []
 
-# Reload the best model: 
+# Reload the best model:
 model = AutoModelForSequenceClassification.from_pretrained(trainer.state.best_model_checkpoint)
 model = model.to(device=DEVICE)
 model.eval()
 if str(DEVICE)=="cuda": model = model.bf16() # Only works on GPUs
 
-for batch in tqdm(dsd["dev"].batch(8)): 
+for batch in tqdm(dsd["dev"].batch(8)):
   IDs += [batch["ID"]]
   y_gold += [batch["labels"]]
   with torch.no_grad():
@@ -1044,25 +900,23 @@ results = pd.DataFrame({
 })
 ```
 
+Moving elements incorrectly produces this error:
 
-
-If you don't move the elements properly, you will face this error: 
-
-```txt 
-Expected all tensors to be on the same device, but found at least 
-two devices, cuda:0 and cpu! (when checking argument for argument 
+```txt
+Expected all tensors to be on the same device, but found at least
+two devices, cuda:0 and cpu! (when checking argument for argument
 index in method wrapper_CUDA__index_select)
 ```
 
-The final step is to clean your GPU after using it. Otherwise you risk clogging the memory and flushing it becomes a hassle. Best practices include working inside a `try/except/finally` loop to make sure the memory is clean after use. 
+Clean up the GPU after use, or memory clogs and flushing it becomes a hassle. Wrap training in a `try/except/finally` block:
 
-```python 
+```python
 from gc import collect as gc_collect
 from torch.cuda import empty_cache, synchronize, ipc_collect
 from torch.cuda import is_available as cuda_available
 
 tokenizer, model, dsd, trainer = (None, ) * 4 # All objects that are moved to the GPU
-try: 
+try:
   tokenize = ...
   dsd = ...
   model = ...
@@ -1085,79 +939,91 @@ finally:
 
 ## Read the errors{#sec-errors}
 
-You will face many, many errors. Sometimes they are random and rerunning the script / restarting the kernel will solve the issue. Others are subtle and difficult to identify. In such case, copy paste the error in google (in our experience, genAI is less likely to provide you the right answer), you'll find forums with people who faced the same issue. As stressed in the introduction, downgrading/upgrading some libraries is likely to solve the issue. The four issues below are the ones you are most likely to run into — keep this section as a reference to come back to rather than something to read end to end.
+You will face many errors. Some are random — rerunning the script or restarting the kernel fixes them. Others are subtler: search the exact error message (genAI is often less reliable here than a forum post from someone who hit the same issue), and remember that a library version mismatch is a common root cause. The four below are the most common; treat this as a reference, not required reading.
 
 :::{.callout-note title="Dataset formatting" collapse="true"}
 
-Many errors are raised due to the functions assuming that your columns are well named and that the data has the right format. Make sure to have the following:
+Most formatting errors come from columns not matching what the code expects:
 
-- `"text"` column with the text as string
-- `"labels"` column with the labels as int; if you have multiple labels. Make sure this is a Tensor of integers
-- `"input_ids"` a column with the tokens truncated and padded to the same length. Make sure this is a Tensor of integers
-- `"attention_mask"` a column with the tokens truncated and padded to the same length. Make sure this is a Tensor of integers
+- `"text"`: the text, as a string.
+- `"labels"`: the label(s), as an int (or int tensor, if multi-label).
+- `"input_ids"`: tokens truncated/padded to equal length, as an int tensor.
+- `"attention_mask"`: same shape as `input_ids`, as an int tensor.
 
-Also, depending on the model you're using these columns can have different names. Make sure to check the huggingface documentation related to the model you are using as well as forums.
+Column names can differ by model — check that model's documentation.
 
 :::
 
 :::{.callout-note title="Memory overflow" collapse="true"}
 
-If you face this error using a GPU :
+On GPU:
 
 ```txt
 NVML_SUCCESS == r INTERNAL ASSERT FAILED at "/home/conda/feedstock_root/build_artifacts/libtorch_1750199048837/work/c10/cuda/CUDACachingAllocator.cpp":1016, please report a bug to PyTorch.
 ```
 
-It is likely that you have reached the memory limit of your hardware. Reducing the device batch size or using a smaller model is likely to solve your issue. If you use a CPU the error becomes: `Invalid buffer size: `
+You've hit your hardware's memory limit. Reduce the device batch size or use a smaller model. On CPU, the same issue shows as `Invalid buffer size:`.
 
 :::
 
 :::{.callout-note title="Tensor shapes" collapse="true"}
 
-If you face the following error:
-
 ```txt
 ValueError: too many values to unpack (expected 2)
 ```
 
-The issue is likely to come from the tokenization step. If you type: `dsd["train"][0]["input_ids"].shape`, it must return `torch.Size([400])` and not `torch.Size([1, 400])`. Ensure that the tokenizer does not use `return_tensors="pt"` and that you use `dsd.with_format("torch")`.
+Usually a tokenization issue. `dsd["train"][0]["input_ids"].shape` should return `torch.Size([400])`, not `torch.Size([1, 400])` — make sure the tokenizer isn't called with `return_tensors="pt"`, and that you use `dsd.with_format("torch")`.
 
 :::
 
 :::{.callout-note title="Missing keys when saving/reloading a checkpoint" collapse="true"}
-
-You might face this scary issue:
 
 ```txt
 There were missing keys in the checkpoint model loaded: ['bert.embeddings.LayerNorm.weight', ...
 There were unexpected keys in the checkpoint model loaded: ['bert.embeddings.LayerNorm.beta', ...
 ```
 
-This is merely a convention issue. Some models/versions use beta/gamma keywords instead of weights/biases. This is not a problem and the model solve this automatically. If the loaded model shows unexpected low performance, this might be a sign that the model did not solve this issue automatically. You might have to rename the parameters yourself using the right convention _(very unlikely)_.
+A naming-convention mismatch (some models/versions use `beta`/`gamma` instead of `weight`/`bias`), resolved automatically. If performance is unexpectedly low afterwards, that may be a sign it wasn't — you'd then need to rename the parameters yourself, though this is rare.
 
 :::
 
 # Some good practices
 
-## Save your model and results 
+## Save your model and results
 
-??? necessary ??? -> Export to hugging face for reproducibility and open science
+Push the fine-tuned model to the Hugging Face Hub for reproducibility and easy reuse:
 
-## On annotating your Dataset
+```python
+model.push_to_hub("your-username/your-model-name")
+tokenizer.push_to_hub("your-username/your-model-name")
+```
 
-@ Etienne
+## A code-free alternative: ActiveTigger
 
-## What's a good score? 
-
-@ Etienne @ Julien
+Everything in this tutorial can also be done without writing code, using [ActiveTigger](css.cnrs.fr/active-tigger), open-source software designed by and for social scientists for collaborative annotation and code-free fine-tuning.
 
 # Conclusion
 
-In this tutorial we covered many topics:
-- In @sec-key-concepts we defined some key concepts such as the supervised learning framework, BERT models and fine-tuning. It is important to have a broad understanding of these in order to easily manipulate the objects and adapt the code.
-- In @sec-essentials we laid out the usual fine-tuning pipeline including data processing and formatting, choosing the model, launching the fine-tuning and assessing the performance. @sec-essentials-conclusion summarises the main steps.
-- In @sec-advanced we stopped on more complex concepts such as the reading curve and provided instructions on how to tweak the hyperparameters. This section also discusses using GPU for quicker training and provides hotfixes for common errors.
+This tutorial covered:
 
-# Bibliography
+- Key concepts (@sec-key-concepts): the supervised learning framework, BERT models, fine-tuning.
+- The standard pipeline (@sec-essentials): data processing, model choice, fine-tuning, evaluation — summarised in @sec-essentials-conclusion.
+- Advanced practice (@sec-advanced): reading the learning curve, tuning hyperparameters, using a GPU, and fixing common errors.
 
-Ashwin, J., Chhabra, A., & Rao, V. (2025). Using Large Language Models for Qualitative Analysis can Introduce Serious Bias. *Sociological Methods & Research*, 55(3), 795–839. https://doi.org/10.1177/00491241251338246 
+# References
+
+Ashwin, J., Chhabra, A., & Rao, V. (2025). Using Large Language Models for Qualitative Analysis can Introduce Serious Bias. *Sociological Methods & Research*, 55(3), 795–839. https://doi.org/10.1177/00491241251338246
+
+Bonikowski, B., Luo, Y., & Stuhler, O. (2022). Politics as Usual? Measuring Populism, Nationalism, and Authoritarianism in U.S. Presidential Campaigns (1952–2020) with Neural Language Models. *Sociological Methods & Research*, 51(4), 1721–1787. https://doi.org/10.1177/00491241221122317
+
+Bucher, M. J. J., & Martini, M. (2024). Fine-Tuned 'Small' LLMs (Still) Significantly Outperform Zero-Shot Generative AI Models in Text Classification. arXiv preprint arXiv:2406.08660.
+
+Devlin, J., Chang, M.-W., Lee, K., & Toutanova, K. (2019). BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding. In *Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, Volume 1* (pp. 4171–4186).
+
+Gilardi, F., Alizadeh, M., & Kubli, M. (2023). ChatGPT Outperforms Crowd Workers for Text-Annotation Tasks. *Proceedings of the National Academy of Sciences*, 120(30), e2305016120. https://doi.org/10.1073/pnas.2305016120
+
+Laurer, M., van Atteveldt, W., Casas, A., & Welbers, K. (2024). Less Annotating, More Classifying: Addressing the Data Scarcity Issue of Supervised Machine Learning with Deep Transfer Learning and BERT-NLI. *Political Analysis*, 32(1), 84–100. https://doi.org/10.1017/pan.2023.20
+
+Luo, Y., Card, D., & Jurafsky, D. (2020). Detecting Stance in Media on Global Warming. In *Findings of the Association for Computational Linguistics: EMNLP 2020* (pp. 3296–3315). https://doi.org/10.18653/v1/2020.findings-emnlp.296
+
+Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A. N., Kaiser, Ł., & Polosukhin, I. (2017). Attention is All You Need. *Advances in Neural Information Processing Systems*, 30.
