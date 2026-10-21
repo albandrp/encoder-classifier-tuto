@@ -65,9 +65,12 @@ for (s1, s2) in last_duplicates:
     lab_s1 = df_no_duplicates.loc[df_no_duplicates["sentence"] == s1, "label_text"]
     lab_s2 = df_no_duplicates.loc[df_no_duplicates["sentence"] == s2, "label_text"]
     if lab_s1.item() == lab_s2.item() : 
-        df_no_duplicates.drop(index = lab_s2.index)
+        df_no_duplicates = df_no_duplicates.drop(index = lab_s2.index)
     else: 
-        df_no_duplicates.drop(index = [*lab_s1.index, *lab_s2.index])
+        df_no_duplicates = df_no_duplicates.drop(index = [*lab_s1.index, *lab_s2.index])
+
+# Save the result, loaded in the tutorial as df_clean
+df_no_duplicates.to_csv("./data/dataset-no-duplicates.csv", index = False)
 ```
 
 
@@ -220,7 +223,7 @@ SequenceClassifierOutput(
 
 Here we see that the `logits` contains a $2\times 3$ matrix as well. The logits is the result of `model.classifier(base_model_output.pooler_output)` computed before, except the values aren't exact. This is norma as the model inherently rely on some randomized components.
 
-To obtain probabilities over the 3 labels, one must use an [activation function](xxx), here we will use the `softmax` function because we are in a multiclass setting[^multilabel-activation]:
+To obtain probabilities over the 3 labels, one must use an activation function, here we will use the `softmax` function because we are in a multiclass setting[^multilabel-activation]:
 
 [^multilabel-activation]: For multilabel settings use the `sigmoid` function.
 
@@ -237,3 +240,16 @@ tensor([[0.3401, 0.4815, 0.1785],
 From there you can infer labels the way you want using the output probabilites. In the [evaluating section](./index.qmd#sec-evaluation), we assigned the label with the greater probability.
 
 ## Macro vs micro{#sec-macro-micro}
+With several labels, precision, recall and F1 are first computed for each label, then averaged. Taking the valid set results from [the tutorial](./index.qmd#sec-evaluation):
+
+| | F1 | Number of texts |
+|---|---|---|
+| agrees | 0.67 | 122 |
+| disagrees | 0.46 | 58 |
+| neutral | 0.71 | 126 |
+
+- The **macro** average gives each label the same weight: $(0.67 + 0.46 + 0.71) / 3 \approx 0.61$ (0.62 in the report, computed from unrounded scores).
+- The **weighted** average weights each label by its number of texts: $(0.67 \times 122 + 0.46 \times 58 + 0.71 \times 126) / 306 \approx 0.65$.
+- The **micro** average pools all texts together before computing the score. When each text has exactly one label, micro F1 equals accuracy: 0.66.
+
+The weighted and micro averages are dominated by the frequent labels, so they barely reflect the model's poor performance on "disagrees". The macro average does, which is why we recommend it.
