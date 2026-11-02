@@ -50,7 +50,7 @@ It will **not** cover:
 - The fundamentals of NLP and linguistics, beyond what's necessary here. See [Jurafsky](https://web.stanford.edu/~jurafsky/slp3/).
 - How to turn your research question into an annotation protocol: we assume you can design and motivate that yourself.
 
-A notebook with all cells pre-run is available [here](https://github.com/AXLMRIN/encoder-classifier-tuto/blob/main/tuto.ipynb).
+A notebook with all cells pre-run is available [here](https://github.com/albandrp/encoder-classifier-tuto/blob/main/tuto.ipynb).
 
 :::{.callout-note collapse="true" title="Refresher: the classification task in machine learning"}
 
@@ -174,7 +174,7 @@ df.groupby(["label_text"]).size()
 ```
 
 ```txt
-MACE_pred
+label_text
 agrees       871
 disagrees    441
 neutral      988
@@ -268,17 +268,21 @@ df_clean
 |---|---|---|---|---|---|---|---|
 |  0 | t0        | Warmer-than-normal s... | agrees       |       0.625 | ID-0005 |            170 | Warmer-than-normal s... |
 |  1 | t1        | We will continue to ... | neutral      |       0     | ID-0006 |             94 | We will continue to ... |
-|  3 | t11       | Claims of global war... | disagrees    |      -1     | ID-0008 |             55 | Claims of global war... |
+|  2 | t10       | The actual rise in s... | neutral      |       0     | ID-0007 |            118 | The actual rise in s... |
 
-**Splitting the data** into train (70%, the texts the model learns from), valid (15%, used to pick hyperparameters) and test (15%, reserved for a final, unbiased read of performance):
+2035 rows remain.
+
+**Splitting the data** into train (70%, the texts the model learns from), valid (15%, used to pick hyperparameters) and test (15%, reserved for a final, unbiased read of performance). The split is random, so we fix a **seed**: anyone running the code again gets the same split, and results close to the ones below (small differences remain from one machine to another).
 
 ```python
 from datasets import Dataset, DatasetDict
+
+SEED = 2306406
 ds = Dataset.from_pandas(df_clean)
 
-temp = ds.train_test_split(test_size = 0.3, shuffle=True)
+temp = ds.train_test_split(test_size = 0.3, shuffle = True, seed = SEED)
 ds_train = temp["train"]
-temp = temp["test"].train_test_split(test_size = 0.5, shuffle = True)
+temp = temp["test"].train_test_split(test_size = 0.5, shuffle = True, seed = SEED)
 ds_valid = temp["train"]
 ds_test = temp["test"]
 
@@ -293,18 +297,18 @@ dsd = DatasetDict({
 DatasetDict({
     train: Dataset({
         features: ['sent_id', 'sentence', 'label_text', 'av_rating', 'ID', 'sentence-len',
-        'sentence-preprocessed', '__index_level_0__'],
-        num_rows: 1428
+        'sentence-preprocessed'],
+        num_rows: 1424
     })
     valid: Dataset({
         features: ['sent_id', 'sentence', 'label_text', 'av_rating', 'ID', 'sentence-len',
-        'sentence-preprocessed', '__index_level_0__'],
-        num_rows: 306
+        'sentence-preprocessed'],
+        num_rows: 305
     })
     test: Dataset({
         features: ['sent_id', 'sentence', 'label_text', 'av_rating', 'ID', 'sentence-len',
-        'sentence-preprocessed', '__index_level_0__'],
-        num_rows: 307
+        'sentence-preprocessed'],
+        num_rows: 306
     })
 })
 ```
@@ -330,7 +334,9 @@ We load it with an AutoModel class[^auto-models], here [`AutoModelForSequenceCla
 [^auto-models]: Auto classes are ready-to-use classes that set up the right architecture for your task.
 
 ```python
-from transformers import AutoModelForSequenceClassification
+from transformers import AutoModelForSequenceClassification, set_seed
+
+set_seed(SEED) # The classifier layer is initialised randomly: fix the seed here too
 
 labels = list(df["label_text"].unique())
 num_labels = len(labels)
@@ -476,12 +482,22 @@ Three steps remain: tokenize the dataset, set the training arguments, and launch
 
 Tokenizing happens in two steps: text is split into tokens from the model's vocabulary, then each sequence is truncated or padded to a fixed length.
 
+Load the tokenizer[^tokens-def-2] the same way as the model:
+
+[^tokens-def-2]: See @sec-key-concepts for what tokenization is and why it's needed.
+
+```python
+from transformers import AutoTokenizer
+
+tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+```
+
 :::{.callout-tip title="Example" collapse="true"}
 ```python
 tokenizer("Hello World! 😇")
 # {'input_ids': [101, 7592, ...], 'token_type_ids': [0, 0, ...], 'attention_mask': [1, 1, ...]}
 tokenizer("Hello World! 😇").input_ids
-# [101, 7592, 2088, 999, 102] <- the token id
+# [101, 7592, 2088, 999, 100, 102] <- the token ids
 tokenizer.decode([101, 7592, 2088, 999, 100, 102])
 # '[CLS] hello world! [UNK] [SEP]'
 # [CLS] is the starting token and [SEP] the terminating one.
@@ -501,16 +517,6 @@ tokenizer(
 # (2, 50) <- long entries are truncated and short ones are padded so that all tokenized entries are the same length
 ```
 :::
-
-Load the tokenizer[^tokens-def-2] the same way as the model:
-
-[^tokens-def-2]: See @sec-key-concepts for what tokenization is and why it's needed.
-
-```python
-from transformers import AutoTokenizer
-
-tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-```
 
 Set the tokenizer's parameters inside a preprocessing function and apply it:
 
@@ -540,15 +546,15 @@ dsd
 DatasetDict({
     train: Dataset({
         features: ['ID', 'labels', 'input_ids', 'token_type_ids', 'attention_mask'],
-        num_rows: 1428
+        num_rows: 1424
     })
     valid: Dataset({
         features: ['ID', 'labels', 'input_ids', 'token_type_ids', 'attention_mask'],
-        num_rows: 306
+        num_rows: 305
     })
     test: Dataset({
         features: ['ID', 'labels', 'input_ids', 'token_type_ids', 'attention_mask'],
-        num_rows: 307
+        num_rows: 306
     })
 })
 ```
@@ -580,6 +586,7 @@ training_arguments = TrainingArguments(
     save_strategy = "steps"   , save_steps    = 0.05,
     load_best_model_at_end = True,
     save_total_limit = 2,
+    seed = SEED,
 
     disable_tqdm = False,
 )
@@ -600,18 +607,28 @@ trainer = Trainer(
 trainer.train()
 ```
 
-|   epoch |   Step |   Training loss |   Evaluation loss |
+|   Epoch |   Step |   Training loss |   Validation loss |
 |--------:|-------:|----------------:|------------------:|
-|  0.5263 |     19 |           1.02  |            0.9146 |
-|  1.053  |     38 |           0.8586 |            0.8175 |
-|  1.579  |     57 |           0.6623 |            0.8265 |
-|  2.105  |     76 |           0.55  |            0.8267 |
-|  2.632  |     95 |           0.3831 |            0.9924 |
-|  3.158  |    114 |           0.3185 |            1.032  |
-|  3.684  |    133 |           0.2283 |            0.9477 |
-|  4.211  |    152 |           0.2028 |            0.9651 |
-|  4.737  |    171 |           0.1313 |            1.1    |
-|  5.0    |    190 |           0.1363 |            1.14   |
+|   0.270 |     12 |          1.0120 |            0.9907 |
+|   0.539 |     24 |          1.0008 |            0.9204 |
+|   0.809 |     36 |          0.9244 |            0.8510 |
+|   1.067 |     48 |          0.7749 |            0.8047 |
+|   1.337 |     60 |          0.7288 |            0.8248 |
+|   1.607 |     72 |          0.6364 |            0.8035 |
+|   1.876 |     84 |          0.6013 |            0.8248 |
+|   2.135 |     96 |          0.5545 |            0.8105 |
+|   2.404 |    108 |          0.4433 |            0.8682 |
+|   2.674 |    120 |          0.3497 |            0.8927 |
+|   2.944 |    132 |          0.3249 |            0.9290 |
+|   3.202 |    144 |          0.2342 |            0.9748 |
+|   3.472 |    156 |          0.1716 |            1.0218 |
+|   3.742 |    168 |          0.1890 |            0.9909 |
+|   4.000 |    180 |          0.2307 |            0.9774 |
+|   4.270 |    192 |          0.1184 |            1.0162 |
+|   4.539 |    204 |          0.1343 |            1.0317 |
+|   4.809 |    216 |          0.1041 |            1.0443 |
+
+Fine-tuning takes about 15 minutes on a recent laptop.
 
 This produces a list of folders[^save-strategy], each holding:
 
@@ -623,14 +640,12 @@ This produces a list of folders[^save-strategy], each holding:
 - `trainer_state.json`: metadata up to that checkpoint.
 - `training_args.bin`: a copy of the training arguments.
 
-Reload a checkpoint the same way as the original model:
+`trainer.state.best_model_checkpoint` holds the path to the best one, where validation loss reaches its minimum: here, checkpoint 72 (`'./models/training/checkpoint-72'`), with a validation loss of 0.80. Reload a checkpoint the same way as the original model:
 
 ```python
 reload_model = AutoModelForSequenceClassification.from_pretrained(
-    "./models/training/checkpoint-38")
+    trainer.state.best_model_checkpoint)
 ```
-
-`trainer.state.best_model_checkpoint` holds the best one: here, checkpoint 38 (`'./models/training/checkpoint-38'`), where evaluation loss reaches its minimum (0.82).
 
 ## Use model for inference and evaluate performance{#sec-evaluation}
 
@@ -688,16 +703,16 @@ print(classification_report(
 ```txt
               precision    recall  f1-score   support
 
-      agrees       0.74      0.61      0.67       122
-   disagrees       0.59      0.38      0.46        58
-     neutral       0.62      0.83      0.71       126
+      agrees       0.67      0.73      0.70       116
+   disagrees       0.64      0.48      0.55        61
+     neutral       0.69      0.73      0.71       128
 
-    accuracy                           0.66       306
-   macro avg       0.65      0.61      0.62       306
-weighted avg       0.67      0.66      0.65       306
+    accuracy                           0.68       305
+   macro avg       0.67      0.64      0.65       305
+weighted avg       0.68      0.68      0.67       305
 ```
 
-Performance on "agrees" and "neutral" is decent but would benefit from further tuning; "disagrees" is barely recognised. Overall, this run is mediocre: @sec-advanced tunes the hyperparameters to do better.
+Performance on "agrees" and "neutral" is decent but would benefit from further tuning. "Disagrees", the rarest label, is the weakest: the model misses about half of these texts (recall 0.48). Overall, at 0.65 macro F1, this run is mediocre: @sec-advanced tunes the hyperparameters to do better.
 
 ### What's a good score?
 
@@ -854,7 +869,7 @@ Change the learning rate first. Keep everything else at the values from @sec-tra
 
 ## Use GPU for faster training{#sec-GPU}
 
-Only relevant if you have a GPU. Otherwise, training on CPU works exactly as shown, just slower; skip ahead to @sec-errors. An NVIDIA GPU[^2] with cuda set up, or a Mac with an MX chip, accelerates training via cuda or mps respectively.
+Only relevant if you have a GPU. Otherwise, training on CPU works exactly as shown, just slower; skip ahead to @sec-errors. An NVIDIA GPU[^2] with cuda set up, or a Mac with an Apple M-series chip, accelerates training via cuda or mps respectively.
 
 [^2]: [AMD GPUs don't support cuda](https://www.tutorialpedia.org/blog/is-it-possible-to-run-cuda-on-amd-gpus/#2-closed-source-ecosystem), though alternatives like [ZLUDA](https://github.com/vosen/ZLUDA) exist.
 
@@ -870,37 +885,21 @@ print("CUDA: ", cuda_available())
 print("MPS: ", mps_available())
 ```
 
-The model and its inputs must live on the same device, so the fine-tuning code changes slightly:
+`Trainer` detects an available GPU and uses it automatically: the fine-tuning code above runs on it unchanged. On an NVIDIA GPU, you can also enable faster, lower-precision computations:
 
 ```python
 # Choose your device
 DEVICE = "cuda" # or "mps", or "cpu"
 
-# Preprocess, tokenize, format and split your data
-ds = ...
-# Move the dataset on the desired device:
-ds = ds.with_format("torch", device = DEVICE)
-
-# Load the model
-model = ...
-# move the model to the desired device
-model = model.to(device = DEVICE)
-# You can check the model device :
-print(model.device)
-
-# Load the training arguments:
-training_args = TrainingArguments(
+training_arguments = TrainingArguments(
   ...
-  bf16 = DEVICE == "cuda",
+  bf16 = DEVICE == "cuda", # Only on recent NVIDIA GPUs
 )
-
-# Set up the trainer and launch the processing
 ```
 
-Inference changes too:
+Your own inference loop, however, must put the model and its inputs on the same device:
 
 ```python
-from torch import no_grad
 IDs = []
 y_gold = []
 y_pred = []
@@ -913,10 +912,10 @@ if DEVICE == "cuda": model = model.to(torch.bfloat16) # Only works on GPUs
 
 for batch in tqdm(dsd["valid"].iter(batch_size = 8)):
   IDs += [batch["ID"]]
-  y_gold += [batch["labels"]]
+  y_gold += [batch["labels"].cpu()]
   with torch.no_grad():
     probs = (
-      model(input_ids = batch["input_ids"], attention_mask= batch["attention_mask"])
+      model(input_ids = batch["input_ids"].to(DEVICE), attention_mask = batch["attention_mask"].to(DEVICE))
       .logits.cpu().softmax(1).float().numpy()
     )
     y_pred += [np.argmax(probs, axis=1)]

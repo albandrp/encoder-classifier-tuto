@@ -24,7 +24,7 @@ df_no_duplicates = df_no_duplicates.loc[
 df_no_duplicates = df_no_duplicates.drop_duplicates("sentence")
 ```
 
-As a final check, we can use the Levenshtein distance to make sure that there are no lasting duplicates: 
+As a final check, we can use the Levenshtein distance (the number of characters to change to turn one sentence into the other) to make sure that there are no lasting duplicates. This requires an extra package, installed with `pip install Levenshtein`; the loop takes under a minute:
 
 ```python
 from Levenshtein import distance as lev_distance
@@ -40,7 +40,7 @@ for i in range(len(df_no_duplicates)):
             print(f"{d} : {s1} || {s2}")
 ```
 
-With this loop, we have found 6 new sentences with duplicates:
+The loop prints about 50 pairs. Most are different sentences that happen to be short and similar ("Global warming is a myth." and "Global warming is a fact."), so the output has to be read by hand. Among them, we found 6 pairs of actual duplicates:
 
 - Global warming isn’t happening. || Global warming isn't happening.
 - There is no solid evidence of global warming. || There is not solid evidence of global warming.
@@ -244,12 +244,12 @@ With several labels, precision, recall and F1 are first computed for each label,
 
 | | F1 | Number of texts |
 |---|---|---|
-| agrees | 0.67 | 122 |
-| disagrees | 0.46 | 58 |
-| neutral | 0.71 | 126 |
+| agrees | 0.70 | 116 |
+| disagrees | 0.55 | 61 |
+| neutral | 0.71 | 128 |
 
-- The **macro** average gives each label the same weight: $(0.67 + 0.46 + 0.71) / 3 \approx 0.61$ (0.62 in the report, computed from unrounded scores).
-- The **weighted** average weights each label by its number of texts: $(0.67 \times 122 + 0.46 \times 58 + 0.71 \times 126) / 306 \approx 0.65$.
-- The **micro** average pools all texts together before computing the score. When each text has exactly one label, micro F1 equals accuracy: 0.66.
+- The **macro** average gives each label the same weight: $(0.70 + 0.55 + 0.71) / 3 \approx 0.65$.
+- The **weighted** average weights each label by its number of texts: $(0.70 \times 116 + 0.55 \times 61 + 0.71 \times 128) / 305 \approx 0.67$.
+- The **micro** average pools all texts together before computing the score. When each text has exactly one label, micro F1 equals accuracy: 0.68.
 
-The weighted and micro averages are dominated by the frequent labels, so they barely reflect the model's poor performance on "disagrees". The macro average does, which is why we recommend it.
+The weighted and micro averages are dominated by the frequent labels, so they partly hide the model's weaker performance on "disagrees". The macro average does not, which is why we recommend it.
