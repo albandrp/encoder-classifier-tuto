@@ -21,7 +21,7 @@ This tutorial is part of a series on using LLMs as annotators. A companion [tuto
 
 [^open-weights]: Meaning you can download the model to your own machine, unlike most proprietary models.
 
-[^supervised-learning-disclaimer]: This is the supervised learning framework. We assume you are familiar with it and won't recall it here (see @sec-objectives).
+[^supervised-learning-disclaimer]: This is the supervised learning framework, briefly recalled in a refresher at the end of @sec-objectives.
 
 **Why not just use ChatGPT?** Generative models (GPT, Llama, Claude) are prompted: you describe your categories and hope the model interprets them as you would, every time. An encoder (BERT and its relatives) produces no text but an **embedding**, a numerical representation of a text's meaning[^transformer], and is **fine-tuned** on texts you label yourself. You thus control the whole pipeline: the model can only assign the categories you defined, learned from your annotations and nothing else. A generative model brings everything it learned elsewhere into each decision, and may read into a text things that are not in it. Its errors are then not random but biased: Ashwin et al. (2025) found that a generative LLM's coding errors on interviews with Rohingya refugees were correlated with respondents' characteristics, whereas a model fine-tuned on human-coded transcripts showed less bias.
 
@@ -46,11 +46,38 @@ This tutorial will:
 It will **not** cover:
 
 - Python syntax: we assume you already know the language. See [Lino's course](https://pythonds.linogaliana.fr/) if you don't.
-- The prerequisites of supervised learning: we assume you are familiar with the framework (training a classifier, splitting annotations into train, valid and test sets) and its standard metrics (precision, recall, accuracy, F1 score), and that you have an annotated dataset to fine-tune on. See the [scikit-learn user guide](https://scikit-learn.org/stable/supervised_learning.html) for the former, and Pustejovsky & Stubbs (2012) or Krippendorff (2018) for annotation.
+- Supervised learning in depth: we assume you have an annotated dataset to fine-tune on, and only recall the essentials of the framework (training a classifier, splitting annotations into train, valid and test sets) and its standard metrics (precision, recall, accuracy, F1 score) in the refresher below. See the [scikit-learn user guide](https://scikit-learn.org/stable/supervised_learning.html) to go further, and Pustejovsky & Stubbs (2012) or Krippendorff (2018) for annotation.
 - The fundamentals of NLP and linguistics, beyond what's necessary here. See [Jurafsky](https://web.stanford.edu/~jurafsky/slp3/).
 - How to turn your research question into an annotation protocol: we assume you can design and motivate that yourself.
 
 A notebook with all cells pre-run is available [here](https://github.com/AXLMRIN/encoder-classifier-tuto/blob/main/tuto.ipynb).
+
+:::{.callout-note collapse="true" title="Refresher: the classification task in machine learning"}
+
+The classification task is a concept from machine learning: an algorithm uses input data (the predictors) to assign a class, or label, to each input. [Scikit-learn](https://scikit-learn.org/stable/)[^scikit-learn] puts it this way: _Identifying which category an object belongs to._ The connection with annotation is direct: each text needs to be assigned a label, so annotating is a classification task.
+
+[^scikit-learn]: The most widely used Python library for machine learning. It has had a major impact on the coding community, notably by establishing the `.fit` / `.transform` syntax.
+
+Classification belongs to the **supervised learning** family: to assign labels, the algorithm must first be **fitted** on **training data**, _in our case handmade annotations_. Fitting (or training) consists of providing inputs and their labels, so that the algorithm adapts to the task and _"learns"_ it. Social scientists therefore first need to annotate a small set of texts to train the classifier.
+
+Classifiers often have structuring settings called **hyperparameters**, which shape how the algorithm learns and are not changed during training. They must be set with care to reach satisfying performance.
+
+To evaluate classifiers, we use [normalised metrics](https://scikit-learn.org/stable/modules/model_evaluation.html#which-scoring-function-should-i-use) such as [precision](https://en.wikipedia.org/wiki/Precision_and_recall), [recall](https://en.wikipedia.org/wiki/Precision_and_recall), [accuracy](https://en.wikipedia.org/wiki/Accuracy_and_precision#In_binary_classification) and the [F1 score](https://en.wikipedia.org/wiki/F-score#Definition). Depending on your research, you may want to optimise one metric or another:
+
+- **Precision**: _"out of all the elements predicted as class A, how many were indeed from class A?"_ This metric is rather conservative: optimising it limits the number of false positives.
+- **Recall**: _"out of all the elements that should have been classified as A, how many were indeed classified as A?"_ This metric is more inclusive: optimising it limits the number of false negatives.
+- **Accuracy**: _"across all classes, how many elements were classified correctly?"_ It can be misleading when classes are imbalanced: a model that always predicts the most frequent class can score high while never recognising the rare ones.
+- **F1 score**: the harmonic mean of precision and recall, which balances the two.
+
+![Precision and recall](./assets/precision_recall.jpg){width=50%}
+
+To assess a model correctly and prevent cherry-picking, we evaluate it on distinct subsets of texts and annotations:
+
+- **The train set**: the texts shown to the algorithm to _learn_ from. Metrics on the train set are inflated, since the model has already seen these texts.
+- **The valid set**: texts used to assess the algorithm on new data, and to choose the hyperparameters. Metrics on the valid set are likely to be somewhat inflated too, since the hyperparameters were chosen to optimise them.
+- **The test set**: texts used once, at the end, to assess the algorithm with the chosen hyperparameters on new data. Metrics on the test set are meant to represent the algorithm's performance on new data, and are the ones you should report, to avoid cherry-picking.
+
+:::
 
 # Key concepts and valuable resources to start your NLP journey{#sec-key-concepts}
 
