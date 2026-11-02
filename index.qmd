@@ -54,25 +54,21 @@ A notebook with all cells pre-run is available [here](https://github.com/AXLMRIN
 
 # Key concepts and valuable resources to start your NLP journey{#sec-key-concepts}
 
-This tutorial **fine-tunes** a **pretrained** **encoder** model to perform a **classification** task. The terms needed to follow it:
+This tutorial **fine-tunes** a **pretrained** **encoder** model to perform a **classification** task. This section explains these terms, at a level sufficient to follow the rest of the tutorial.
 
-| Term | Meaning |
-|---|---|
-| **Neural network**, **parameters** | The models used here are neural networks. Their behaviour is entirely determined by a large set of adjustable quantities called parameters (also known as weights and biases). |
-| **Training** | Adjusting the parameters until the model produces the output you expect. |
-| **Encoder** | A model that turns a text into an embedding. BERT (Devlin et al., 2019) is the best known; CamemBERT (French), RoBERTa and ModernBERT are later variants. This tutorial uses `bert-base-uncased`. |
-| **Embedding** | A numerical representation of a text's meaning: texts close in meaning get close embeddings, measured by a similarity score (@fig-similarity). |
-| **Token** | The unit a model reads: a word or a piece of word from the model's vocabulary. Texts are split into tokens before use. |
-| **Context window** | The maximum number of tokens a model processes at once. Anything beyond is ignored, so long texts may have to be split into sentences or paragraphs (older models read 128 to 512 tokens). |
-| **Pretrained model** | A model already trained to recognise language patterns, by organisations with the hardware and data to do so (days to months of work), and published on Hugging Face. |
-| **Fine-tuning** | Slightly adjusting a pretrained model's parameters with your annotations, to turn it into a classifier for your own labels. It takes a few minutes, at most a few dozen on limited hardware. |
-| **Batch** | The group of annotated texts the model reads before each correction of its parameters. |
-| **Loss** | The gap between the model's predictions and your annotations, which each correction tries to reduce. |
-| **Epoch** | One full pass through the train set. |
+The models used here are **neural networks**. Their behaviour is entirely determined by a large set of adjustable quantities called **parameters** (also known as weights and biases), and **training** a model means adjusting these parameters until it produces the output you expect.
+
+An **encoder** turns a text into an **embedding**: a numerical representation of its meaning. Texts close in meaning get close embeddings, a proximity measured by a similarity score (@fig-similarity). BERT (Devlin et al., 2019) is the best-known encoder; CamemBERT (French), RoBERTa and ModernBERT are later variants. This tutorial uses `bert-base-uncased`.
 
 ![Similarity between embeddings: "apple" and "pear" are close, but in the context of Apple's new product, "apple"'s embedding shifts away from "pear". For a "left/right" label, embeddings should likewise capture what sets left-wing texts apart from right-wing ones.](./assets/similarity.png){#fig-similarity width=100%}
 
-The settings that control fine-tuning (how many texts per batch, how large each correction is, how many epochs) are called hyperparameters; we introduce them when diagnosing training problems (@sec-hyperparameters-tuning).
+Models don't read words but **tokens**: words or pieces of words from the model's vocabulary, into which texts are split before use. Every encoder has a **context window**, the maximum number of tokens it processes at once. Anything beyond is ignored, so long texts may have to be split into sentences or paragraphs (older models read 128 to 512 tokens).
+
+A **pretrained** model has already learned how a language works, by reading very large amounts of general text such as Wikipedia, books or web pages. This step requires computing power and data out of reach of most research teams, so it is done by companies and research labs, who often share the resulting models publicly; this tutorial downloads its model from Hugging Face, the main platform for doing so. **Fine-tuning** adjusts its parameters slightly with your annotations, to turn it into a classifier for your own labels. It is quick: a few minutes, at most a few dozen on limited hardware.
+
+Fine-tuning proceeds by small successive corrections: the model reads a **batch** of annotated texts, compares its predictions with your annotations, and adjusts its parameters slightly to reduce the gap between the two, called the **loss**. It then moves to the next batch, and repeats until it has gone through the whole train set: one **epoch**. The settings that control this loop (how many texts per batch, how large each correction is, how many epochs) are called hyperparameters; we introduce them when diagnosing training problems (@sec-hyperparameters-tuning).
+
+To check that the model learned your categories rather than memorised your examples, annotations are split into three sets: the model learns from the **train** set, you compare settings on the **valid** set, and the **test** set is kept aside for one final, unbiased score.
 
 :::{.callout-note collapse="true" title="Learn more about neural networks, Transformers and encoders"}
 
@@ -579,16 +575,16 @@ trainer.train()
 
 |   epoch |   Step |   Training loss |   Evaluation loss |
 |--------:|-------:|----------------:|------------------:|
-|  0.5263 |     19 |           8.163 |            0.9146 |
-|  1.053  |     38 |           6.869 |            0.8175 |
-|  1.579  |     57 |           5.298 |            0.8265 |
-|  2.105  |     76 |           4.4   |            0.8267 |
-|  2.632  |     95 |           3.065 |            0.9924 |
-|  3.158  |    114 |           2.548 |            1.032  |
-|  3.684  |    133 |           1.826 |            0.9477 |
-|  4.211  |    152 |           1.622 |            0.9651 |
-|  4.737  |    171 |           1.05  |            1.1    |
-|  5.0    |    190 |           1.09  |            1.14   |
+|  0.5263 |     19 |           1.02  |            0.9146 |
+|  1.053  |     38 |           0.8586 |            0.8175 |
+|  1.579  |     57 |           0.6623 |            0.8265 |
+|  2.105  |     76 |           0.55  |            0.8267 |
+|  2.632  |     95 |           0.3831 |            0.9924 |
+|  3.158  |    114 |           0.3185 |            1.032  |
+|  3.684  |    133 |           0.2283 |            0.9477 |
+|  4.211  |    152 |           0.2028 |            0.9651 |
+|  4.737  |    171 |           0.1313 |            1.1    |
+|  5.0    |    190 |           0.1363 |            1.14   |
 
 This produces a list of folders[^save-strategy], each holding:
 
@@ -607,9 +603,7 @@ reload_model = AutoModelForSequenceClassification.from_pretrained(
     "./models/training/checkpoint-38")
 ```
 
-`trainer.state.best_model_checkpoint` holds the best one: here, checkpoint 38 (`'./models/training/checkpoint-38'`), where evaluation loss reaches its minimum (0.82)[^train-loss-scale].
-
-[^train-loss-scale]: The training loss in the table above is on a different scale from the evaluation loss: with gradient accumulation, this version of `transformers` appears to log it multiplied by `gradient_accumulation_steps` (8 here). Divide it by 8 before comparing the two.
+`trainer.state.best_model_checkpoint` holds the best one: here, checkpoint 38 (`'./models/training/checkpoint-38'`), where evaluation loss reaches its minimum (0.82).
 
 ## Use model for inference and evaluate performance{#sec-evaluation}
 
