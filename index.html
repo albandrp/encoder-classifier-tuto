@@ -282,7 +282,7 @@ window.Quarto = {
 <li>The fundamentals of NLP and linguistics, beyond what’s necessary here. See <a href="https://web.stanford.edu/~jurafsky/slp3/">Jurafsky</a>.</li>
 <li>How to turn your research question into an annotation protocol: we assume you can design and motivate that yourself.</li>
 </ul>
-<p>A notebook with all cells pre-run is available <a href="https://github.com/AXLMRIN/encoder-classifier-tuto/blob/main/tuto.ipynb">here</a>.</p>
+<p>A notebook with all cells pre-run is available <a href="https://github.com/albandrp/encoder-classifier-tuto/blob/main/tuto.ipynb">here</a>.</p>
 <div class="callout callout-style-default callout-note callout-titled" title="Refresher: the classification task in machine learning">
 <div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-1-contents" aria-controls="callout-1" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
@@ -471,7 +471,7 @@ Figure&nbsp;1: Similarity between embeddings: “apple” and “pear” are clo
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> df.rename(columns<span class="op">=</span>{<span class="st">"MACE_pred"</span> : <span class="st">"label_text"</span>}) <span class="co"># Rename MACE_pred for conveniency</span></span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>df</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>df.groupby([<span class="st">"label_text"</span>]).size()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>MACE_pred</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>label_text</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>agrees       871</span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>disagrees    441</span>
 <span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>neutral      988</span>
@@ -577,47 +577,50 @@ Figure&nbsp;2: Sentence length
 <td>We will continue to …</td>
 </tr>
 <tr class="odd">
-<td>3</td>
-<td>t11</td>
-<td>Claims of global war…</td>
-<td>disagrees</td>
-<td>-1</td>
-<td>ID-0008</td>
-<td>55</td>
-<td>Claims of global war…</td>
+<td>2</td>
+<td>t10</td>
+<td>The actual rise in s…</td>
+<td>neutral</td>
+<td>0</td>
+<td>ID-0007</td>
+<td>118</td>
+<td>The actual rise in s…</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Splitting the data</strong> into train (70%, the texts the model learns from), valid (15%, used to pick hyperparameters) and test (15%, reserved for a final, unbiased read of performance):</p>
+<p>2035 rows remain.</p>
+<p><strong>Splitting the data</strong> into train (70%, the texts the model learns from), valid (15%, used to pick hyperparameters) and test (15%, reserved for a final, unbiased read of performance). The split is random, so we fix a <strong>seed</strong>: anyone running the code again gets the same split, and results close to the ones below (small differences remain from one machine to another).</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> datasets <span class="im">import</span> Dataset, DatasetDict</span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>ds <span class="op">=</span> Dataset.from_pandas(df_clean)</span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>temp <span class="op">=</span> ds.train_test_split(test_size <span class="op">=</span> <span class="fl">0.3</span>, shuffle<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>ds_train <span class="op">=</span> temp[<span class="st">"train"</span>]</span>
-<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>temp <span class="op">=</span> temp[<span class="st">"test"</span>].train_test_split(test_size <span class="op">=</span> <span class="fl">0.5</span>, shuffle <span class="op">=</span> <span class="va">True</span>)</span>
-<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>ds_valid <span class="op">=</span> temp[<span class="st">"train"</span>]</span>
-<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>ds_test <span class="op">=</span> temp[<span class="st">"test"</span>]</span>
-<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>dsd <span class="op">=</span> DatasetDict({</span>
-<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>  <span class="st">"train"</span>: ds_train,</span>
-<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>  <span class="st">"valid"</span>: ds_valid,</span>
-<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>  <span class="st">"test"</span>: ds_test</span>
-<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>})</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>SEED <span class="op">=</span> <span class="dv">2306406</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>ds <span class="op">=</span> Dataset.from_pandas(df_clean)</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>temp <span class="op">=</span> ds.train_test_split(test_size <span class="op">=</span> <span class="fl">0.3</span>, shuffle <span class="op">=</span> <span class="va">True</span>, seed <span class="op">=</span> SEED)</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>ds_train <span class="op">=</span> temp[<span class="st">"train"</span>]</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>temp <span class="op">=</span> temp[<span class="st">"test"</span>].train_test_split(test_size <span class="op">=</span> <span class="fl">0.5</span>, shuffle <span class="op">=</span> <span class="va">True</span>, seed <span class="op">=</span> SEED)</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>ds_valid <span class="op">=</span> temp[<span class="st">"train"</span>]</span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>ds_test <span class="op">=</span> temp[<span class="st">"test"</span>]</span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>dsd <span class="op">=</span> DatasetDict({</span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>  <span class="st">"train"</span>: ds_train,</span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>  <span class="st">"valid"</span>: ds_valid,</span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>  <span class="st">"test"</span>: ds_test</span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a>})</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <pre><code>DatasetDict({
     train: Dataset({
         features: ['sent_id', 'sentence', 'label_text', 'av_rating', 'ID', 'sentence-len',
-        'sentence-preprocessed', '__index_level_0__'],
-        num_rows: 1428
+        'sentence-preprocessed'],
+        num_rows: 1424
     })
     valid: Dataset({
         features: ['sent_id', 'sentence', 'label_text', 'av_rating', 'ID', 'sentence-len',
-        'sentence-preprocessed', '__index_level_0__'],
-        num_rows: 306
+        'sentence-preprocessed'],
+        num_rows: 305
     })
     test: Dataset({
         features: ['sent_id', 'sentence', 'label_text', 'av_rating', 'ID', 'sentence-len',
-        'sentence-preprocessed', '__index_level_0__'],
-        num_rows: 307
+        'sentence-preprocessed'],
+        num_rows: 306
     })
 })</code></pre>
 </section>
@@ -648,20 +651,22 @@ Figure&nbsp;2: Sentence length
 </div>
 </div>
 <p>We load it with an AutoModel class<a href="#fn9" class="footnote-ref" id="fnref9" role="doc-noteref"><sup>9</sup></a>, here <a href="https://huggingface.co/docs/transformers/en/model_doc/auto#transformers.AutoModelForSequenceClassification"><code>AutoModelForSequenceClassification</code></a>:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> transformers <span class="im">import</span> AutoModelForSequenceClassification</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> transformers <span class="im">import</span> AutoModelForSequenceClassification, set_seed</span>
 <span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>labels <span class="op">=</span> <span class="bu">list</span>(df[<span class="st">"label_text"</span>].unique())</span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>num_labels <span class="op">=</span> <span class="bu">len</span>(labels)</span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>id2label <span class="op">=</span> {<span class="bu">id</span>:label <span class="cf">for</span> <span class="bu">id</span>, label <span class="kw">in</span> <span class="bu">enumerate</span>(labels)}</span>
-<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>label2id <span class="op">=</span> {label:<span class="bu">id</span>  <span class="cf">for</span> <span class="bu">id</span>, label <span class="kw">in</span> <span class="bu">enumerate</span>(labels)}</span>
-<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>MODEL_NAME <span class="op">=</span> <span class="st">"google-bert/bert-base-uncased"</span></span>
-<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> AutoModelForSequenceClassification.from_pretrained(</span>
-<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>    MODEL_NAME,</span>
-<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>    num_labels<span class="op">=</span>num_labels,</span>
-<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>    id2label<span class="op">=</span>id2label,</span>
-<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>    label2id<span class="op">=</span>label2id,</span>
-<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>set_seed(SEED) <span class="co"># The classifier layer is initialised randomly: fix the seed here too</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>labels <span class="op">=</span> <span class="bu">list</span>(df[<span class="st">"label_text"</span>].unique())</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>num_labels <span class="op">=</span> <span class="bu">len</span>(labels)</span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>id2label <span class="op">=</span> {<span class="bu">id</span>:label <span class="cf">for</span> <span class="bu">id</span>, label <span class="kw">in</span> <span class="bu">enumerate</span>(labels)}</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>label2id <span class="op">=</span> {label:<span class="bu">id</span>  <span class="cf">for</span> <span class="bu">id</span>, label <span class="kw">in</span> <span class="bu">enumerate</span>(labels)}</span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>MODEL_NAME <span class="op">=</span> <span class="st">"google-bert/bert-base-uncased"</span></span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> AutoModelForSequenceClassification.from_pretrained(</span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>    MODEL_NAME,</span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>    num_labels<span class="op">=</span>num_labels,</span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a>    id2label<span class="op">=</span>id2label,</span>
+<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a>    label2id<span class="op">=</span>label2id,</span>
+<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="callout callout-style-default callout-warning callout-titled">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -811,6 +816,10 @@ Note&nbsp;1: Model description
 <section id="sec-tokenization" class="level3">
 <h3 class="anchored" data-anchor-id="sec-tokenization">Tokenize the dataset</h3>
 <p>Tokenizing happens in two steps: text is split into tokens from the model’s vocabulary, then each sequence is truncated or padded to a fixed length.</p>
+<p>Load the tokenizer<a href="#fn10" class="footnote-ref" id="fnref10" role="doc-noteref"><sup>10</sup></a> the same way as the model:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> transformers <span class="im">import</span> AutoTokenizer</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>tokenizer <span class="op">=</span> AutoTokenizer.from_pretrained(MODEL_NAME)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="callout callout-style-default callout-tip callout-titled" title="Example">
 <div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-7-contents" aria-controls="callout-7" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
@@ -823,34 +832,30 @@ Note&nbsp;1: Model description
 </div>
 <div id="callout-7" class="callout-7-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>tokenizer(<span class="st">"Hello World! 😇"</span>)</span>
-<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="co"># {'input_ids': [101, 7592, ...], 'token_type_ids': [0, 0, ...], 'attention_mask': [1, 1, ...]}</span></span>
-<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>tokenizer(<span class="st">"Hello World! 😇"</span>).input_ids</span>
-<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a><span class="co"># [101, 7592, 2088, 999, 102] &lt;- the token id</span></span>
-<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>tokenizer.decode([<span class="dv">101</span>, <span class="dv">7592</span>, <span class="dv">2088</span>, <span class="dv">999</span>, <span class="dv">100</span>, <span class="dv">102</span>])</span>
-<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a><span class="co"># '[CLS] hello world! [UNK] [SEP]'</span></span>
-<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a><span class="co"># [CLS] is the starting token and [SEP] the terminating one.</span></span>
-<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a><span class="co"># The smiley is marked as unknown [UNK]</span></span>
-<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>tokenizer.decode([<span class="dv">101</span>])</span>
-<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a><span class="co"># '[CLS]' &lt;- token number 101</span></span>
-<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>tokenizer.decode([<span class="dv">2088</span>, <span class="dv">999</span>])</span>
-<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a><span class="co"># 'world!' &lt;- tokens number 2088 and 999</span></span>
-<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>tokenizer(</span>
-<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a>  [<span class="st">"This sentence is very long. "</span> <span class="op">*</span> <span class="dv">20</span>, <span class="co"># Very long</span></span>
-<span id="cb21-15"><a href="#cb21-15" aria-hidden="true" tabindex="-1"></a>   <span class="st">"Short."</span>],                           <span class="co"># Very short</span></span>
-<span id="cb21-16"><a href="#cb21-16" aria-hidden="true" tabindex="-1"></a>  truncation <span class="op">=</span> <span class="va">True</span>,</span>
-<span id="cb21-17"><a href="#cb21-17" aria-hidden="true" tabindex="-1"></a>  padding <span class="op">=</span> <span class="st">"max_length"</span>,</span>
-<span id="cb21-18"><a href="#cb21-18" aria-hidden="true" tabindex="-1"></a>  max_length <span class="op">=</span> <span class="dv">50</span>,</span>
-<span id="cb21-19"><a href="#cb21-19" aria-hidden="true" tabindex="-1"></a>  return_tensors <span class="op">=</span> <span class="st">"np"</span></span>
-<span id="cb21-20"><a href="#cb21-20" aria-hidden="true" tabindex="-1"></a>).input_ids.shape</span>
-<span id="cb21-21"><a href="#cb21-21" aria-hidden="true" tabindex="-1"></a><span class="co"># (2, 50) &lt;- long entries are truncated and short ones are padded so that all tokenized entries are the same length</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>tokenizer(<span class="st">"Hello World! 😇"</span>)</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a><span class="co"># {'input_ids': [101, 7592, ...], 'token_type_ids': [0, 0, ...], 'attention_mask': [1, 1, ...]}</span></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>tokenizer(<span class="st">"Hello World! 😇"</span>).input_ids</span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a><span class="co"># [101, 7592, 2088, 999, 100, 102] &lt;- the token ids</span></span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>tokenizer.decode([<span class="dv">101</span>, <span class="dv">7592</span>, <span class="dv">2088</span>, <span class="dv">999</span>, <span class="dv">100</span>, <span class="dv">102</span>])</span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a><span class="co"># '[CLS] hello world! [UNK] [SEP]'</span></span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a><span class="co"># [CLS] is the starting token and [SEP] the terminating one.</span></span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a><span class="co"># The smiley is marked as unknown [UNK]</span></span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>tokenizer.decode([<span class="dv">101</span>])</span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a><span class="co"># '[CLS]' &lt;- token number 101</span></span>
+<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a>tokenizer.decode([<span class="dv">2088</span>, <span class="dv">999</span>])</span>
+<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a><span class="co"># 'world!' &lt;- tokens number 2088 and 999</span></span>
+<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a>tokenizer(</span>
+<span id="cb22-14"><a href="#cb22-14" aria-hidden="true" tabindex="-1"></a>  [<span class="st">"This sentence is very long. "</span> <span class="op">*</span> <span class="dv">20</span>, <span class="co"># Very long</span></span>
+<span id="cb22-15"><a href="#cb22-15" aria-hidden="true" tabindex="-1"></a>   <span class="st">"Short."</span>],                           <span class="co"># Very short</span></span>
+<span id="cb22-16"><a href="#cb22-16" aria-hidden="true" tabindex="-1"></a>  truncation <span class="op">=</span> <span class="va">True</span>,</span>
+<span id="cb22-17"><a href="#cb22-17" aria-hidden="true" tabindex="-1"></a>  padding <span class="op">=</span> <span class="st">"max_length"</span>,</span>
+<span id="cb22-18"><a href="#cb22-18" aria-hidden="true" tabindex="-1"></a>  max_length <span class="op">=</span> <span class="dv">50</span>,</span>
+<span id="cb22-19"><a href="#cb22-19" aria-hidden="true" tabindex="-1"></a>  return_tensors <span class="op">=</span> <span class="st">"np"</span></span>
+<span id="cb22-20"><a href="#cb22-20" aria-hidden="true" tabindex="-1"></a>).input_ids.shape</span>
+<span id="cb22-21"><a href="#cb22-21" aria-hidden="true" tabindex="-1"></a><span class="co"># (2, 50) &lt;- long entries are truncated and short ones are padded so that all tokenized entries are the same length</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </div>
 </div>
-<p>Load the tokenizer<a href="#fn10" class="footnote-ref" id="fnref10" role="doc-noteref"><sup>10</sup></a> the same way as the model:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> transformers <span class="im">import</span> AutoTokenizer</span>
-<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>tokenizer <span class="op">=</span> AutoTokenizer.from_pretrained(MODEL_NAME)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Set the tokenizer’s parameters inside a preprocessing function and apply it:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> preprocess_dataset(row: <span class="bu">dict</span>):</span>
 <span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  tokenized_entry <span class="op">=</span> tokenizer(</span>
@@ -874,15 +879,15 @@ Note&nbsp;1: Model description
 <pre><code>DatasetDict({
     train: Dataset({
         features: ['ID', 'labels', 'input_ids', 'token_type_ids', 'attention_mask'],
-        num_rows: 1428
+        num_rows: 1424
     })
     valid: Dataset({
         features: ['ID', 'labels', 'input_ids', 'token_type_ids', 'attention_mask'],
-        num_rows: 306
+        num_rows: 305
     })
     test: Dataset({
         features: ['ID', 'labels', 'input_ids', 'token_type_ids', 'attention_mask'],
-        num_rows: 307
+        num_rows: 306
     })
 })</code></pre>
 <p>The data is ready for fine-tuning.</p>
@@ -908,9 +913,10 @@ Note&nbsp;1: Model description
 <span id="cb25-16"><a href="#cb25-16" aria-hidden="true" tabindex="-1"></a>    save_strategy <span class="op">=</span> <span class="st">"steps"</span>   , save_steps    <span class="op">=</span> <span class="fl">0.05</span>,</span>
 <span id="cb25-17"><a href="#cb25-17" aria-hidden="true" tabindex="-1"></a>    load_best_model_at_end <span class="op">=</span> <span class="va">True</span>,</span>
 <span id="cb25-18"><a href="#cb25-18" aria-hidden="true" tabindex="-1"></a>    save_total_limit <span class="op">=</span> <span class="dv">2</span>,</span>
-<span id="cb25-19"><a href="#cb25-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb25-20"><a href="#cb25-20" aria-hidden="true" tabindex="-1"></a>    disable_tqdm <span class="op">=</span> <span class="va">False</span>,</span>
-<span id="cb25-21"><a href="#cb25-21" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb25-19"><a href="#cb25-19" aria-hidden="true" tabindex="-1"></a>    seed <span class="op">=</span> SEED,</span>
+<span id="cb25-20"><a href="#cb25-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-21"><a href="#cb25-21" aria-hidden="true" tabindex="-1"></a>    disable_tqdm <span class="op">=</span> <span class="va">False</span>,</span>
+<span id="cb25-22"><a href="#cb25-22" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="launch-fine-tuning" class="level3">
 <h3 class="anchored" data-anchor-id="launch-fine-tuning">Launch fine-tuning</h3>
@@ -926,75 +932,124 @@ Note&nbsp;1: Model description
 <table class="caption-top table">
 <thead>
 <tr class="header">
-<th style="text-align: right;">epoch</th>
+<th style="text-align: right;">Epoch</th>
 <th style="text-align: right;">Step</th>
 <th style="text-align: right;">Training loss</th>
-<th style="text-align: right;">Evaluation loss</th>
+<th style="text-align: right;">Validation loss</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td style="text-align: right;">0.5263</td>
-<td style="text-align: right;">19</td>
-<td style="text-align: right;">1.02</td>
-<td style="text-align: right;">0.9146</td>
+<td style="text-align: right;">0.270</td>
+<td style="text-align: right;">12</td>
+<td style="text-align: right;">1.0120</td>
+<td style="text-align: right;">0.9907</td>
 </tr>
 <tr class="even">
-<td style="text-align: right;">1.053</td>
-<td style="text-align: right;">38</td>
-<td style="text-align: right;">0.8586</td>
-<td style="text-align: right;">0.8175</td>
+<td style="text-align: right;">0.539</td>
+<td style="text-align: right;">24</td>
+<td style="text-align: right;">1.0008</td>
+<td style="text-align: right;">0.9204</td>
 </tr>
 <tr class="odd">
-<td style="text-align: right;">1.579</td>
-<td style="text-align: right;">57</td>
-<td style="text-align: right;">0.6623</td>
-<td style="text-align: right;">0.8265</td>
+<td style="text-align: right;">0.809</td>
+<td style="text-align: right;">36</td>
+<td style="text-align: right;">0.9244</td>
+<td style="text-align: right;">0.8510</td>
 </tr>
 <tr class="even">
-<td style="text-align: right;">2.105</td>
-<td style="text-align: right;">76</td>
-<td style="text-align: right;">0.55</td>
-<td style="text-align: right;">0.8267</td>
+<td style="text-align: right;">1.067</td>
+<td style="text-align: right;">48</td>
+<td style="text-align: right;">0.7749</td>
+<td style="text-align: right;">0.8047</td>
 </tr>
 <tr class="odd">
-<td style="text-align: right;">2.632</td>
-<td style="text-align: right;">95</td>
-<td style="text-align: right;">0.3831</td>
-<td style="text-align: right;">0.9924</td>
+<td style="text-align: right;">1.337</td>
+<td style="text-align: right;">60</td>
+<td style="text-align: right;">0.7288</td>
+<td style="text-align: right;">0.8248</td>
 </tr>
 <tr class="even">
-<td style="text-align: right;">3.158</td>
-<td style="text-align: right;">114</td>
-<td style="text-align: right;">0.3185</td>
-<td style="text-align: right;">1.032</td>
+<td style="text-align: right;">1.607</td>
+<td style="text-align: right;">72</td>
+<td style="text-align: right;">0.6364</td>
+<td style="text-align: right;">0.8035</td>
 </tr>
 <tr class="odd">
-<td style="text-align: right;">3.684</td>
-<td style="text-align: right;">133</td>
-<td style="text-align: right;">0.2283</td>
-<td style="text-align: right;">0.9477</td>
+<td style="text-align: right;">1.876</td>
+<td style="text-align: right;">84</td>
+<td style="text-align: right;">0.6013</td>
+<td style="text-align: right;">0.8248</td>
 </tr>
 <tr class="even">
-<td style="text-align: right;">4.211</td>
-<td style="text-align: right;">152</td>
-<td style="text-align: right;">0.2028</td>
-<td style="text-align: right;">0.9651</td>
+<td style="text-align: right;">2.135</td>
+<td style="text-align: right;">96</td>
+<td style="text-align: right;">0.5545</td>
+<td style="text-align: right;">0.8105</td>
 </tr>
 <tr class="odd">
-<td style="text-align: right;">4.737</td>
-<td style="text-align: right;">171</td>
-<td style="text-align: right;">0.1313</td>
-<td style="text-align: right;">1.1</td>
+<td style="text-align: right;">2.404</td>
+<td style="text-align: right;">108</td>
+<td style="text-align: right;">0.4433</td>
+<td style="text-align: right;">0.8682</td>
 </tr>
 <tr class="even">
-<td style="text-align: right;">5.0</td>
-<td style="text-align: right;">190</td>
-<td style="text-align: right;">0.1363</td>
-<td style="text-align: right;">1.14</td>
+<td style="text-align: right;">2.674</td>
+<td style="text-align: right;">120</td>
+<td style="text-align: right;">0.3497</td>
+<td style="text-align: right;">0.8927</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2.944</td>
+<td style="text-align: right;">132</td>
+<td style="text-align: right;">0.3249</td>
+<td style="text-align: right;">0.9290</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">3.202</td>
+<td style="text-align: right;">144</td>
+<td style="text-align: right;">0.2342</td>
+<td style="text-align: right;">0.9748</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">3.472</td>
+<td style="text-align: right;">156</td>
+<td style="text-align: right;">0.1716</td>
+<td style="text-align: right;">1.0218</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">3.742</td>
+<td style="text-align: right;">168</td>
+<td style="text-align: right;">0.1890</td>
+<td style="text-align: right;">0.9909</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">4.000</td>
+<td style="text-align: right;">180</td>
+<td style="text-align: right;">0.2307</td>
+<td style="text-align: right;">0.9774</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">4.270</td>
+<td style="text-align: right;">192</td>
+<td style="text-align: right;">0.1184</td>
+<td style="text-align: right;">1.0162</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">4.539</td>
+<td style="text-align: right;">204</td>
+<td style="text-align: right;">0.1343</td>
+<td style="text-align: right;">1.0317</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">4.809</td>
+<td style="text-align: right;">216</td>
+<td style="text-align: right;">0.1041</td>
+<td style="text-align: right;">1.0443</td>
 </tr>
 </tbody>
 </table>
+<p>Fine-tuning takes about 15 minutes on a recent laptop.</p>
 <p>This produces a list of folders<a href="#fn12" class="footnote-ref" id="fnref12" role="doc-noteref"><sup>12</sup></a>, each holding:</p>
 <ul>
 <li><code>config.json</code>: the model config, similar to <code>AutoConfig</code>.</li>
@@ -1003,10 +1058,9 @@ Note&nbsp;1: Model description
 <li><code>trainer_state.json</code>: metadata up to that checkpoint.</li>
 <li><code>training_args.bin</code>: a copy of the training arguments.</li>
 </ul>
-<p>Reload a checkpoint the same way as the original model:</p>
+<p><code>trainer.state.best_model_checkpoint</code> holds the path to the best one, where validation loss reaches its minimum: here, checkpoint 72 (<code>'./models/training/checkpoint-72'</code>), with a validation loss of 0.80. Reload a checkpoint the same way as the original model:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>reload_model <span class="op">=</span> AutoModelForSequenceClassification.from_pretrained(</span>
-<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"./models/training/checkpoint-38"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p><code>trainer.state.best_model_checkpoint</code> holds the best one: here, checkpoint 38 (<code>'./models/training/checkpoint-38'</code>), where evaluation loss reaches its minimum (0.82).</p>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>    trainer.state.best_model_checkpoint)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 </section>
 <section id="sec-evaluation" class="level2 page-columns page-full">
@@ -1062,14 +1116,14 @@ Note
 <span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb30"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>              precision    recall  f1-score   support</span>
 <span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>      agrees       0.74      0.61      0.67       122</span>
-<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>   disagrees       0.59      0.38      0.46        58</span>
-<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>     neutral       0.62      0.83      0.71       126</span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>      agrees       0.67      0.73      0.70       116</span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>   disagrees       0.64      0.48      0.55        61</span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>     neutral       0.69      0.73      0.71       128</span>
 <span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a>    accuracy                           0.66       306</span>
-<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a>   macro avg       0.65      0.61      0.62       306</span>
-<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a>weighted avg       0.67      0.66      0.65       306</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Performance on “agrees” and “neutral” is decent but would benefit from further tuning; “disagrees” is barely recognised. Overall, this run is mediocre: <a href="#sec-advanced" class="quarto-xref">Section&nbsp;4</a> tunes the hyperparameters to do better.</p>
+<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a>    accuracy                           0.68       305</span>
+<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a>   macro avg       0.67      0.64      0.65       305</span>
+<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a>weighted avg       0.68      0.68      0.67       305</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Performance on “agrees” and “neutral” is decent but would benefit from further tuning. “Disagrees”, the rarest label, is the weakest: the model misses about half of these texts (recall 0.48). Overall, at 0.65 macro F1, this run is mediocre: <a href="#sec-advanced" class="quarto-xref">Section&nbsp;4</a> tunes the hyperparameters to do better.</p>
 <section id="whats-a-good-score" class="level3">
 <h3 class="anchored" data-anchor-id="whats-a-good-score">What’s a good score?</h3>
 <p>There’s no universal “good enough” threshold: it depends on the task. Compare against these instead of judging the raw number alone:</p>
@@ -1224,63 +1278,47 @@ Figure&nbsp;3: Learning curve
 </section>
 <section id="sec-GPU" class="level2">
 <h2 class="anchored" data-anchor-id="sec-GPU">Use GPU for faster training</h2>
-<p>Only relevant if you have a GPU. Otherwise, training on CPU works exactly as shown, just slower; skip ahead to <a href="#sec-errors" class="quarto-xref">Section&nbsp;4.3</a>. An NVIDIA GPU<a href="#fn17" class="footnote-ref" id="fnref17" role="doc-noteref"><sup>17</sup></a> with cuda set up, or a Mac with an MX chip, accelerates training via cuda or mps respectively.</p>
+<p>Only relevant if you have a GPU. Otherwise, training on CPU works exactly as shown, just slower; skip ahead to <a href="#sec-errors" class="quarto-xref">Section&nbsp;4.3</a>. An NVIDIA GPU<a href="#fn17" class="footnote-ref" id="fnref17" role="doc-noteref"><sup>17</sup></a> with cuda set up, or a Mac with an Apple M-series chip, accelerates training via cuda or mps respectively.</p>
 <p>Check whether cuda/mps are available<a href="#fn18" class="footnote-ref" id="fnref18" role="doc-noteref"><sup>18</sup></a>:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> torch.cuda <span class="im">import</span> is_available <span class="im">as</span> cuda_available</span>
 <span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> torch.mps <span class="im">import</span> is_available <span class="im">as</span> mps_available</span>
 <span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"CUDA: "</span>, cuda_available())</span>
 <span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"MPS: "</span>, mps_available())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>The model and its inputs must live on the same device, so the fine-tuning code changes slightly:</p>
+<p><code>Trainer</code> detects an available GPU and uses it automatically: the fine-tuning code above runs on it unchanged. On an NVIDIA GPU, you can also enable faster, lower-precision computations:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb34"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Choose your device</span></span>
 <span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>DEVICE <span class="op">=</span> <span class="st">"cuda"</span> <span class="co"># or "mps", or "cpu"</span></span>
 <span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Preprocess, tokenize, format and split your data</span></span>
-<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a>ds <span class="op">=</span> ...</span>
-<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Move the dataset on the desired device:</span></span>
-<span id="cb34-7"><a href="#cb34-7" aria-hidden="true" tabindex="-1"></a>ds <span class="op">=</span> ds.with_format(<span class="st">"torch"</span>, device <span class="op">=</span> DEVICE)</span>
-<span id="cb34-8"><a href="#cb34-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb34-9"><a href="#cb34-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Load the model</span></span>
-<span id="cb34-10"><a href="#cb34-10" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> ...</span>
-<span id="cb34-11"><a href="#cb34-11" aria-hidden="true" tabindex="-1"></a><span class="co"># move the model to the desired device</span></span>
-<span id="cb34-12"><a href="#cb34-12" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> model.to(device <span class="op">=</span> DEVICE)</span>
-<span id="cb34-13"><a href="#cb34-13" aria-hidden="true" tabindex="-1"></a><span class="co"># You can check the model device :</span></span>
-<span id="cb34-14"><a href="#cb34-14" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(model.device)</span>
-<span id="cb34-15"><a href="#cb34-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb34-16"><a href="#cb34-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Load the training arguments:</span></span>
-<span id="cb34-17"><a href="#cb34-17" aria-hidden="true" tabindex="-1"></a>training_args <span class="op">=</span> TrainingArguments(</span>
-<span id="cb34-18"><a href="#cb34-18" aria-hidden="true" tabindex="-1"></a>  ...</span>
-<span id="cb34-19"><a href="#cb34-19" aria-hidden="true" tabindex="-1"></a>  bf16 <span class="op">=</span> DEVICE <span class="op">==</span> <span class="st">"cuda"</span>,</span>
-<span id="cb34-20"><a href="#cb34-20" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb34-21"><a href="#cb34-21" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb34-22"><a href="#cb34-22" aria-hidden="true" tabindex="-1"></a><span class="co"># Set up the trainer and launch the processing</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Inference changes too:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb35"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> torch <span class="im">import</span> no_grad</span>
-<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>IDs <span class="op">=</span> []</span>
-<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>y_gold <span class="op">=</span> []</span>
-<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a>y_pred <span class="op">=</span> []</span>
-<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Reload the best model:</span></span>
-<span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> AutoModelForSequenceClassification.from_pretrained(trainer.state.best_model_checkpoint)</span>
-<span id="cb35-8"><a href="#cb35-8" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> model.to(device<span class="op">=</span>DEVICE)</span>
-<span id="cb35-9"><a href="#cb35-9" aria-hidden="true" tabindex="-1"></a>model.<span class="bu">eval</span>()</span>
-<span id="cb35-10"><a href="#cb35-10" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> DEVICE <span class="op">==</span> <span class="st">"cuda"</span>: model <span class="op">=</span> model.to(torch.bfloat16) <span class="co"># Only works on GPUs</span></span>
-<span id="cb35-11"><a href="#cb35-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb35-12"><a href="#cb35-12" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> batch <span class="kw">in</span> tqdm(dsd[<span class="st">"valid"</span>].<span class="bu">iter</span>(batch_size <span class="op">=</span> <span class="dv">8</span>)):</span>
-<span id="cb35-13"><a href="#cb35-13" aria-hidden="true" tabindex="-1"></a>  IDs <span class="op">+=</span> [batch[<span class="st">"ID"</span>]]</span>
-<span id="cb35-14"><a href="#cb35-14" aria-hidden="true" tabindex="-1"></a>  y_gold <span class="op">+=</span> [batch[<span class="st">"labels"</span>]]</span>
-<span id="cb35-15"><a href="#cb35-15" aria-hidden="true" tabindex="-1"></a>  <span class="cf">with</span> torch.no_grad():</span>
-<span id="cb35-16"><a href="#cb35-16" aria-hidden="true" tabindex="-1"></a>    probs <span class="op">=</span> (</span>
-<span id="cb35-17"><a href="#cb35-17" aria-hidden="true" tabindex="-1"></a>      model(input_ids <span class="op">=</span> batch[<span class="st">"input_ids"</span>], attention_mask<span class="op">=</span> batch[<span class="st">"attention_mask"</span>])</span>
-<span id="cb35-18"><a href="#cb35-18" aria-hidden="true" tabindex="-1"></a>      .logits.cpu().softmax(<span class="dv">1</span>).<span class="bu">float</span>().numpy()</span>
-<span id="cb35-19"><a href="#cb35-19" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb35-20"><a href="#cb35-20" aria-hidden="true" tabindex="-1"></a>    y_pred <span class="op">+=</span> [np.argmax(probs, axis<span class="op">=</span><span class="dv">1</span>)]</span>
-<span id="cb35-21"><a href="#cb35-21" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb35-22"><a href="#cb35-22" aria-hidden="true" tabindex="-1"></a>results <span class="op">=</span> pd.DataFrame({</span>
-<span id="cb35-23"><a href="#cb35-23" aria-hidden="true" tabindex="-1"></a>  <span class="st">"ID"</span>: np.concat(IDs),</span>
-<span id="cb35-24"><a href="#cb35-24" aria-hidden="true" tabindex="-1"></a>  <span class="st">"gold"</span>: np.concat(y_gold),</span>
-<span id="cb35-25"><a href="#cb35-25" aria-hidden="true" tabindex="-1"></a>  <span class="st">"pred"</span>: np.concat(y_pred)</span>
-<span id="cb35-26"><a href="#cb35-26" aria-hidden="true" tabindex="-1"></a>})</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a>training_arguments <span class="op">=</span> TrainingArguments(</span>
+<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a>  ...</span>
+<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a>  bf16 <span class="op">=</span> DEVICE <span class="op">==</span> <span class="st">"cuda"</span>, <span class="co"># Only on recent NVIDIA GPUs</span></span>
+<span id="cb34-7"><a href="#cb34-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Your own inference loop, however, must put the model and its inputs on the same device:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb35"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>IDs <span class="op">=</span> []</span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>y_gold <span class="op">=</span> []</span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>y_pred <span class="op">=</span> []</span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Reload the best model:</span></span>
+<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> AutoModelForSequenceClassification.from_pretrained(trainer.state.best_model_checkpoint)</span>
+<span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> model.to(device<span class="op">=</span>DEVICE)</span>
+<span id="cb35-8"><a href="#cb35-8" aria-hidden="true" tabindex="-1"></a>model.<span class="bu">eval</span>()</span>
+<span id="cb35-9"><a href="#cb35-9" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> DEVICE <span class="op">==</span> <span class="st">"cuda"</span>: model <span class="op">=</span> model.to(torch.bfloat16) <span class="co"># Only works on GPUs</span></span>
+<span id="cb35-10"><a href="#cb35-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-11"><a href="#cb35-11" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> batch <span class="kw">in</span> tqdm(dsd[<span class="st">"valid"</span>].<span class="bu">iter</span>(batch_size <span class="op">=</span> <span class="dv">8</span>)):</span>
+<span id="cb35-12"><a href="#cb35-12" aria-hidden="true" tabindex="-1"></a>  IDs <span class="op">+=</span> [batch[<span class="st">"ID"</span>]]</span>
+<span id="cb35-13"><a href="#cb35-13" aria-hidden="true" tabindex="-1"></a>  y_gold <span class="op">+=</span> [batch[<span class="st">"labels"</span>].cpu()]</span>
+<span id="cb35-14"><a href="#cb35-14" aria-hidden="true" tabindex="-1"></a>  <span class="cf">with</span> torch.no_grad():</span>
+<span id="cb35-15"><a href="#cb35-15" aria-hidden="true" tabindex="-1"></a>    probs <span class="op">=</span> (</span>
+<span id="cb35-16"><a href="#cb35-16" aria-hidden="true" tabindex="-1"></a>      model(input_ids <span class="op">=</span> batch[<span class="st">"input_ids"</span>].to(DEVICE), attention_mask <span class="op">=</span> batch[<span class="st">"attention_mask"</span>].to(DEVICE))</span>
+<span id="cb35-17"><a href="#cb35-17" aria-hidden="true" tabindex="-1"></a>      .logits.cpu().softmax(<span class="dv">1</span>).<span class="bu">float</span>().numpy()</span>
+<span id="cb35-18"><a href="#cb35-18" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb35-19"><a href="#cb35-19" aria-hidden="true" tabindex="-1"></a>    y_pred <span class="op">+=</span> [np.argmax(probs, axis<span class="op">=</span><span class="dv">1</span>)]</span>
+<span id="cb35-20"><a href="#cb35-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-21"><a href="#cb35-21" aria-hidden="true" tabindex="-1"></a>results <span class="op">=</span> pd.DataFrame({</span>
+<span id="cb35-22"><a href="#cb35-22" aria-hidden="true" tabindex="-1"></a>  <span class="st">"ID"</span>: np.concat(IDs),</span>
+<span id="cb35-23"><a href="#cb35-23" aria-hidden="true" tabindex="-1"></a>  <span class="st">"gold"</span>: np.concat(y_gold),</span>
+<span id="cb35-24"><a href="#cb35-24" aria-hidden="true" tabindex="-1"></a>  <span class="st">"pred"</span>: np.concat(y_pred)</span>
+<span id="cb35-25"><a href="#cb35-25" aria-hidden="true" tabindex="-1"></a>})</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Moving elements incorrectly produces this error:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb36"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>Expected all tensors to be on the same device, but found at least</span>
 <span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>two devices, cuda:0 and cpu! (when checking argument for argument</span>

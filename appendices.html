@@ -227,7 +227,7 @@ window.Quarto = {
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    :</span>
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>]</span>
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>df_no_duplicates <span class="op">=</span> df_no_duplicates.drop_duplicates(<span class="st">"sentence"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>As a final check, we can use the Levenshtein distance to make sure that there are no lasting duplicates:</p>
+<p>As a final check, we can use the Levenshtein distance (the number of characters to change to turn one sentence into the other) to make sure that there are no lasting duplicates. This requires an extra package, installed with <code>pip install Levenshtein</code>; the loop takes under a minute:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> Levenshtein <span class="im">import</span> distance <span class="im">as</span> lev_distance</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>threshold <span class="op">=</span> <span class="dv">10</span></span>
@@ -239,7 +239,7 @@ window.Quarto = {
 <span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>        d <span class="op">=</span> lev_distance(s1, s2)</span>
 <span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> d <span class="op">&lt;</span> threshold:</span>
 <span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="ss">f"</span><span class="sc">{</span>d<span class="sc">}</span><span class="ss"> : </span><span class="sc">{</span>s1<span class="sc">}</span><span class="ss"> || </span><span class="sc">{</span>s2<span class="sc">}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>With this loop, we have found 6 new sentences with duplicates:</p>
+<p>The loop prints about 50 pairs. Most are different sentences that happen to be short and similar (“Global warming is a myth.” and “Global warming is a fact.”), so the output has to be read by hand. Among them, we found 6 pairs of actual duplicates:</p>
 <ul>
 <li>Global warming isn’t happening. || Global warming isn’t happening.</li>
 <li>There is no solid evidence of global warming. || There is not solid evidence of global warming.</li>
@@ -387,27 +387,27 @@ window.Quarto = {
 <tbody>
 <tr class="odd">
 <td>agrees</td>
-<td>0.67</td>
-<td>122</td>
+<td>0.70</td>
+<td>116</td>
 </tr>
 <tr class="even">
 <td>disagrees</td>
-<td>0.46</td>
-<td>58</td>
+<td>0.55</td>
+<td>61</td>
 </tr>
 <tr class="odd">
 <td>neutral</td>
 <td>0.71</td>
-<td>126</td>
+<td>128</td>
 </tr>
 </tbody>
 </table>
 <ul>
-<li>The <strong>macro</strong> average gives each label the same weight: <span class="math inline">\((0.67 + 0.46 + 0.71) / 3 \approx 0.61\)</span> (0.62 in the report, computed from unrounded scores).</li>
-<li>The <strong>weighted</strong> average weights each label by its number of texts: <span class="math inline">\((0.67 \times 122 + 0.46 \times 58 + 0.71 \times 126) / 306 \approx 0.65\)</span>.</li>
-<li>The <strong>micro</strong> average pools all texts together before computing the score. When each text has exactly one label, micro F1 equals accuracy: 0.66.</li>
+<li>The <strong>macro</strong> average gives each label the same weight: <span class="math inline">\((0.70 + 0.55 + 0.71) / 3 \approx 0.65\)</span>.</li>
+<li>The <strong>weighted</strong> average weights each label by its number of texts: <span class="math inline">\((0.70 \times 116 + 0.55 \times 61 + 0.71 \times 128) / 305 \approx 0.67\)</span>.</li>
+<li>The <strong>micro</strong> average pools all texts together before computing the score. When each text has exactly one label, micro F1 equals accuracy: 0.68.</li>
 </ul>
-<p>The weighted and micro averages are dominated by the frequent labels, so they barely reflect the model’s poor performance on “disagrees”. The macro average does, which is why we recommend it.</p>
+<p>The weighted and micro averages are dominated by the frequent labels, so they partly hide the model’s weaker performance on “disagrees”. The macro average does not, which is why we recommend it.</p>
 
 
 </section>
