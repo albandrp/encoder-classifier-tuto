@@ -278,11 +278,48 @@ window.Quarto = {
 <p>It will <strong>not</strong> cover:</p>
 <ul>
 <li>Python syntax: we assume you already know the language. See <a href="https://pythonds.linogaliana.fr/">Lino’s course</a> if you don’t.</li>
-<li>The prerequisites of supervised learning: we assume you are familiar with the framework (training a classifier, splitting annotations into train, valid and test sets) and its standard metrics (precision, recall, accuracy, F1 score), and that you have an annotated dataset to fine-tune on. See the <a href="https://scikit-learn.org/stable/supervised_learning.html">scikit-learn user guide</a> for the former, and Pustejovsky &amp; Stubbs (2012) or Krippendorff (2018) for annotation.</li>
+<li>Supervised learning in depth: we assume you have an annotated dataset to fine-tune on, and only recall the essentials of the framework (training a classifier, splitting annotations into train, valid and test sets) and its standard metrics (precision, recall, accuracy, F1 score) in the refresher below. See the <a href="https://scikit-learn.org/stable/supervised_learning.html">scikit-learn user guide</a> to go further, and Pustejovsky &amp; Stubbs (2012) or Krippendorff (2018) for annotation.</li>
 <li>The fundamentals of NLP and linguistics, beyond what’s necessary here. See <a href="https://web.stanford.edu/~jurafsky/slp3/">Jurafsky</a>.</li>
 <li>How to turn your research question into an annotation protocol: we assume you can design and motivate that yourself.</li>
 </ul>
 <p>A notebook with all cells pre-run is available <a href="https://github.com/AXLMRIN/encoder-classifier-tuto/blob/main/tuto.ipynb">here</a>.</p>
+<div class="callout callout-style-default callout-note callout-titled" title="Refresher: the classification task in machine learning">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-1-contents" aria-controls="callout-1" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Refresher: the classification task in machine learning
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-1" class="callout-1-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>The classification task is a concept from machine learning: an algorithm uses input data (the predictors) to assign a class, or label, to each input. <a href="https://scikit-learn.org/stable/">Scikit-learn</a><a href="#fn5" class="footnote-ref" id="fnref5" role="doc-noteref"><sup>5</sup></a> puts it this way: <em>Identifying which category an object belongs to.</em> The connection with annotation is direct: each text needs to be assigned a label, so annotating is a classification task.</p>
+<p>Classification belongs to the <strong>supervised learning</strong> family: to assign labels, the algorithm must first be <strong>fitted</strong> on <strong>training data</strong>, <em>in our case handmade annotations</em>. Fitting (or training) consists of providing inputs and their labels, so that the algorithm adapts to the task and <em>“learns”</em> it. Social scientists therefore first need to annotate a small set of texts to train the classifier.</p>
+<p>Classifiers often have structuring settings called <strong>hyperparameters</strong>, which shape how the algorithm learns and are not changed during training. They must be set with care to reach satisfying performance.</p>
+<p>To evaluate classifiers, we use <a href="https://scikit-learn.org/stable/modules/model_evaluation.html#which-scoring-function-should-i-use">normalised metrics</a> such as <a href="https://en.wikipedia.org/wiki/Precision_and_recall">precision</a>, <a href="https://en.wikipedia.org/wiki/Precision_and_recall">recall</a>, <a href="https://en.wikipedia.org/wiki/Accuracy_and_precision#In_binary_classification">accuracy</a> and the <a href="https://en.wikipedia.org/wiki/F-score#Definition">F1 score</a>. Depending on your research, you may want to optimise one metric or another:</p>
+<ul>
+<li><strong>Precision</strong>: <em>“out of all the elements predicted as class A, how many were indeed from class A?”</em> This metric is rather conservative: optimising it limits the number of false positives.</li>
+<li><strong>Recall</strong>: <em>“out of all the elements that should have been classified as A, how many were indeed classified as A?”</em> This metric is more inclusive: optimising it limits the number of false negatives.</li>
+<li><strong>Accuracy</strong>: <em>“across all classes, how many elements were classified correctly?”</em> It can be misleading when classes are imbalanced: a model that always predicts the most frequent class can score high while never recognising the rare ones.</li>
+<li><strong>F1 score</strong>: the harmonic mean of precision and recall, which balances the two.</li>
+</ul>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="./assets/precision_recall.jpg" class="img-fluid figure-img" style="width:50.0%"></p>
+<figcaption>Precision and recall</figcaption>
+</figure>
+</div>
+<p>To assess a model correctly and prevent cherry-picking, we evaluate it on distinct subsets of texts and annotations:</p>
+<ul>
+<li><strong>The train set</strong>: the texts shown to the algorithm to <em>learn</em> from. Metrics on the train set are inflated, since the model has already seen these texts.</li>
+<li><strong>The valid set</strong>: texts used to assess the algorithm on new data, and to choose the hyperparameters. Metrics on the valid set are likely to be somewhat inflated too, since the hyperparameters were chosen to optimise them.</li>
+<li><strong>The test set</strong>: texts used once, at the end, to assess the algorithm with the chosen hyperparameters on new data. Metrics on the test set are meant to represent the algorithm’s performance on new data, and are the ones you should report, to avoid cherry-picking.</li>
+</ul>
+</div>
+</div>
+</div>
 </section>
 </section>
 <section id="sec-key-concepts" class="level1">
@@ -305,7 +342,7 @@ Figure&nbsp;1: Similarity between embeddings: “apple” and “pear” are clo
 <p>Fine-tuning proceeds by small successive corrections: the model reads a <strong>batch</strong> of annotated texts, compares its predictions with your annotations, and adjusts its parameters slightly to reduce the gap between the two, called the <strong>loss</strong>. It then moves to the next batch, and repeats until it has gone through the whole train set: one <strong>epoch</strong>. The settings that control this loop (how many texts per batch, how large each correction is, how many epochs) are called hyperparameters; we introduce them when diagnosing training problems (<a href="#sec-hyperparameters-tuning" class="quarto-xref">Section&nbsp;4.1</a>).</p>
 <p>To check that the model learned your categories rather than memorised your examples, annotations are split into three sets: the model learns from the <strong>train</strong> set, you compare settings on the <strong>valid</strong> set, and the <strong>test</strong> set is kept aside for one final, unbiased score.</p>
 <div class="callout callout-style-default callout-note callout-titled" title="Learn more about neural networks, Transformers and encoders">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-1-contents" aria-controls="callout-1" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-2-contents" aria-controls="callout-2" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -314,7 +351,7 @@ Figure&nbsp;1: Similarity between embeddings: “apple” and “pear” are clo
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-1" class="callout-1-contents callout-collapse collapse">
+<div id="callout-2" class="callout-2-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <ul>
 <li><a href="https://www.youtube.com/playlist?list=PLZHQObOWTQDNU6R1_67000Dx_ZCJB-3pi">3Blue1Brown, <em>Neural networks</em></a>: a visual, intuition-first video series, a good entry point with no prior exposure.</li>
@@ -331,7 +368,7 @@ Figure&nbsp;1: Similarity between embeddings: “apple” and “pear” are clo
 <h2 class="anchored" data-anchor-id="install-environment">Install environment</h2>
 <p>This tutorial uses Python 3.12:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install <span class="at">-qU</span> pandas <span class="st">"transformers==4.52.4"</span> datasets ipykernel matplotlib torch <span class="st">"accelerate&gt;=0.26.0"</span> scikit-learn plotly <span class="st">"nbformat&gt;=4.2.0"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p><a href="https://pytorch.org/">PyTorch</a> and <a href="https://huggingface.co/docs/transformers/index">Transformers</a> are well documented, with large communities that have already debugged most version-compatibility issues you’ll hit. We recommend a virtual environment manager such as conda<a href="#fn5" class="footnote-ref" id="fnref5" role="doc-noteref"><sup>5</sup></a>, and keeping track of your library versions to save debugging time later.</p>
+<p><a href="https://pytorch.org/">PyTorch</a> and <a href="https://huggingface.co/docs/transformers/index">Transformers</a> are well documented, with large communities that have already debugged most version-compatibility issues you’ll hit. We recommend a virtual environment manager such as conda<a href="#fn6" class="footnote-ref" id="fnref6" role="doc-noteref"><sup>6</sup></a>, and keeping track of your library versions to save debugging time later.</p>
 </section>
 </section>
 <section id="sec-essentials" class="level1 page-columns page-full">
@@ -467,7 +504,7 @@ Figure&nbsp;2: Sentence length
 </figure>
 </div>
 <p>These sentences are short and fairly uniform in length, so we won’t filter on it. Performance is not guaranteed for texts very different in length, tone or source from the training data.</p>
-<p><strong>Unwanted characters</strong>: unlike TF-IDF, transformer models are trained on punctuation and benefit from keeping it; strip only what carries no semantic value for your task (e.g.&nbsp;emojis, if your model doesn’t recognise them<a href="#fn6" class="footnote-ref" id="fnref6" role="doc-noteref"><sup>6</sup></a>). Here we just fix some punctuation irregularities:</p>
+<p><strong>Unwanted characters</strong>: unlike TF-IDF, transformer models are trained on punctuation and benefit from keeping it; strip only what carries no semantic value for your task (e.g.&nbsp;emojis, if your model doesn’t recognise them<a href="#fn7" class="footnote-ref" id="fnref7" role="doc-noteref"><sup>7</sup></a>). Here we just fix some punctuation irregularities:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> preprocess_text(text: <span class="bu">str</span>):</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span>(<span class="bu">isinstance</span>(text, <span class="bu">str</span>)):</span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> pd.NA</span>
@@ -586,9 +623,9 @@ Figure&nbsp;2: Sentence length
 </section>
 <section id="choose-and-load-a-model" class="level2">
 <h2 class="anchored" data-anchor-id="choose-and-load-a-model">Choose and load a model</h2>
-<p>We use the Transformers package, maintained by <a href="https://huggingface.co/">Hugging Face</a><a href="#fn7" class="footnote-ref" id="fnref7" role="doc-noteref"><sup>7</sup></a>, and start with <a href="https://huggingface.co/google-bert/bert-base-uncased">google-bert/bert-base-uncased</a>.</p>
+<p>We use the Transformers package, maintained by <a href="https://huggingface.co/">Hugging Face</a><a href="#fn8" class="footnote-ref" id="fnref8" role="doc-noteref"><sup>8</sup></a>, and start with <a href="https://huggingface.co/google-bert/bert-base-uncased">google-bert/bert-base-uncased</a>.</p>
 <div class="callout callout-style-default callout-note callout-titled" title="How to choose a model">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-2-contents" aria-controls="callout-2" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-3-contents" aria-controls="callout-3" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -597,7 +634,7 @@ Figure&nbsp;2: Sentence length
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-2" class="callout-2-contents callout-collapse collapse">
+<div id="callout-3" class="callout-3-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <p>Model performance is sensitive to task and context: try several and compare. Criteria to weigh:</p>
 <ul>
@@ -610,7 +647,7 @@ Figure&nbsp;2: Sentence length
 </div>
 </div>
 </div>
-<p>We load it with an AutoModel class<a href="#fn8" class="footnote-ref" id="fnref8" role="doc-noteref"><sup>8</sup></a>, here <a href="https://huggingface.co/docs/transformers/en/model_doc/auto#transformers.AutoModelForSequenceClassification"><code>AutoModelForSequenceClassification</code></a>:</p>
+<p>We load it with an AutoModel class<a href="#fn9" class="footnote-ref" id="fnref9" role="doc-noteref"><sup>9</sup></a>, here <a href="https://huggingface.co/docs/transformers/en/model_doc/auto#transformers.AutoModelForSequenceClassification"><code>AutoModelForSequenceClassification</code></a>:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> transformers <span class="im">import</span> AutoModelForSequenceClassification</span>
 <span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>labels <span class="op">=</span> <span class="bu">list</span>(df[<span class="st">"label_text"</span>].unique())</span>
@@ -639,7 +676,7 @@ Warning
 </div>
 </div>
 <div id="nte-model-description" class="callout callout-style-default callout-note callout-titled" title="Model description">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-4-contents" aria-controls="callout-4" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-5-contents" aria-controls="callout-5" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -648,7 +685,7 @@ Note&nbsp;1: Model description
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-4" class="callout-4-contents callout-collapse collapse">
+<div id="callout-5" class="callout-5-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <p>Inspect the architecture directly:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(model)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -718,7 +755,7 @@ Note&nbsp;1: Model description
 </div>
 </div>
 <div class="callout callout-style-default callout-note callout-titled" title="Tips and tricks: read the model configuration">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-5-contents" aria-controls="callout-5" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-6-contents" aria-controls="callout-6" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -727,7 +764,7 @@ Note&nbsp;1: Model description
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-5" class="callout-5-contents callout-collapse collapse">
+<div id="callout-6" class="callout-6-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <p><code>AutoConfig</code> surfaces details that model documentation sometimes omits:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> transformers <span class="im">import</span> AutoConfig</span>
@@ -775,7 +812,7 @@ Note&nbsp;1: Model description
 <h3 class="anchored" data-anchor-id="sec-tokenization">Tokenize the dataset</h3>
 <p>Tokenizing happens in two steps: text is split into tokens from the model’s vocabulary, then each sequence is truncated or padded to a fixed length.</p>
 <div class="callout callout-style-default callout-tip callout-titled" title="Example">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-6-contents" aria-controls="callout-6" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-7-contents" aria-controls="callout-7" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -784,7 +821,7 @@ Note&nbsp;1: Model description
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-6" class="callout-6-contents callout-collapse collapse">
+<div id="callout-7" class="callout-7-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>tokenizer(<span class="st">"Hello World! 😇"</span>)</span>
 <span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="co"># {'input_ids': [101, 7592, ...], 'token_type_ids': [0, 0, ...], 'attention_mask': [1, 1, ...]}</span></span>
@@ -810,7 +847,7 @@ Note&nbsp;1: Model description
 </div>
 </div>
 </div>
-<p>Load the tokenizer<a href="#fn9" class="footnote-ref" id="fnref9" role="doc-noteref"><sup>9</sup></a> the same way as the model:</p>
+<p>Load the tokenizer<a href="#fn10" class="footnote-ref" id="fnref10" role="doc-noteref"><sup>10</sup></a> the same way as the model:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> transformers <span class="im">import</span> AutoTokenizer</span>
 <span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>tokenizer <span class="op">=</span> AutoTokenizer.from_pretrained(MODEL_NAME)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -852,7 +889,7 @@ Note&nbsp;1: Model description
 </section>
 <section id="sec-training-parameters" class="level3">
 <h3 class="anchored" data-anchor-id="sec-training-parameters">Setup fine-tuning hyperparameters</h3>
-<p>Fine-tuning parameters live in the <code>TrainingArguments</code><a href="#fn10" class="footnote-ref" id="fnref10" role="doc-noteref"><sup>10</sup></a> object. Below are the main ones; the full list of <a href="https://huggingface.co/docs/transformers/v4.49.0/en/main_classes/trainer#transformers.TrainingArguments">117 parameters</a> is in the documentation. What each hyperparameter does, and how to tune it, is covered in <a href="#sec-hyperparameters-tuning" class="quarto-xref">Section&nbsp;4.1</a>.</p>
+<p>Fine-tuning parameters live in the <code>TrainingArguments</code><a href="#fn11" class="footnote-ref" id="fnref11" role="doc-noteref"><sup>11</sup></a> object. Below are the main ones; the full list of <a href="https://huggingface.co/docs/transformers/v4.49.0/en/main_classes/trainer#transformers.TrainingArguments">117 parameters</a> is in the documentation. What each hyperparameter does, and how to tune it, is covered in <a href="#sec-hyperparameters-tuning" class="quarto-xref">Section&nbsp;4.1</a>.</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> transformers <span class="im">import</span> TrainingArguments, Trainer</span>
 <span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>training_arguments <span class="op">=</span> TrainingArguments(</span>
 <span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Hyperparameters</span></span>
@@ -958,7 +995,7 @@ Note&nbsp;1: Model description
 </tr>
 </tbody>
 </table>
-<p>This produces a list of folders<a href="#fn11" class="footnote-ref" id="fnref11" role="doc-noteref"><sup>11</sup></a>, each holding:</p>
+<p>This produces a list of folders<a href="#fn12" class="footnote-ref" id="fnref12" role="doc-noteref"><sup>12</sup></a>, each holding:</p>
 <ul>
 <li><code>config.json</code>: the model config, similar to <code>AutoConfig</code>.</li>
 <li><code>model.safetensors</code>: all model weights.</li>
@@ -1016,7 +1053,7 @@ Note
 <div class="no-row-height column-margin column-container"><div class="">
 <p>This snippet assumes the model is on CPU. See <a href="#sec-GPU" class="quarto-xref">Section&nbsp;4.2</a> for GPU/MPS.</p>
 </div></div></div>
-<p>We recommend macro<a href="#fn12" class="footnote-ref" id="fnref12" role="doc-noteref"><sup>12</sup></a> F1 as the most representative single number, since it handles class imbalance well. <code>scikit-learn</code>’s <a href="https://scikit-learn.org/stable/modules/model_evaluation.html#classification-metrics"><code>classification_report</code></a> computes everything at once:</p>
+<p>We recommend macro<a href="#fn13" class="footnote-ref" id="fnref13" role="doc-noteref"><sup>13</sup></a> F1 as the most representative single number, since it handles class imbalance well. <code>scikit-learn</code>’s <a href="https://scikit-learn.org/stable/modules/model_evaluation.html#classification-metrics"><code>classification_report</code></a> computes everything at once:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.metrics <span class="im">import</span> classification_report</span>
 <span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(classification_report(</span>
@@ -1074,7 +1111,7 @@ Note
 <h1>Training pipeline: advanced practices</h1>
 <section id="sec-hyperparameters-tuning" class="level2">
 <h2 class="anchored" data-anchor-id="sec-hyperparameters-tuning">Diagnose and fix training problems</h2>
-<p>Checkpoints from <a href="#sec-essentials" class="quarto-xref">Section&nbsp;3</a> include the learning curve: the loss (the gap between predicted and gold labels) tracked on the train and valid sets as training progresses. Retrieve it from the trainer<a href="#fn13" class="footnote-ref" id="fnref13" role="doc-noteref"><sup>13</sup></a> and plot it:</p>
+<p>Checkpoints from <a href="#sec-essentials" class="quarto-xref">Section&nbsp;3</a> include the learning curve: the loss (the gap between predicted and gold labels) tracked on the train and valid sets as training progresses. Retrieve it from the trainer<a href="#fn14" class="footnote-ref" id="fnref14" role="doc-noteref"><sup>14</sup></a> and plot it:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> plotly.express <span class="im">as</span> px</span>
 <span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>loss <span class="op">=</span> []</span>
@@ -1147,7 +1184,7 @@ Figure&nbsp;3: Learning curve
 </div>
 <p>The model performs well on texts it trained on and noticeably worse on valid: both curves fell, but train sits much lower than valid. It has memorised the training examples instead of learning the underlying distinction. This is <strong>overfitting</strong>, the most common failure here, especially with few annotations.</p>
 <ul>
-<li><strong>Weight decay</strong><a href="#fn14" class="footnote-ref" id="fnref14" role="doc-noteref"><sup>14</sup></a> 🟢🟢 discourages extreme parameter values, the usual mechanism behind memorisation. Increasing it constrains the model toward more general solutions; too high and it can’t learn at all. Typical values: 0.01-0.1.</li>
+<li><strong>Weight decay</strong><a href="#fn15" class="footnote-ref" id="fnref15" role="doc-noteref"><sup>15</sup></a> 🟢🟢 discourages extreme parameter values, the usual mechanism behind memorisation. Increasing it constrains the model toward more general solutions; too high and it can’t learn at all. Typical values: 0.01-0.1.</li>
 <li>Lowering the <strong>learning rate</strong> or <strong>epochs</strong> works the same way: fewer, gentler corrections leave less room to fit the specifics of your examples.</li>
 <li>The most reliable fix isn’t a hyperparameter: annotate more data.</li>
 </ul>
@@ -1170,7 +1207,7 @@ Figure&nbsp;3: Learning curve
 <li><strong>Device batch size</strong> is what your hardware actually processes at once: lower it until training fits in memory.</li>
 <li><strong>Gradient accumulation steps</strong> compensates, keeping the effective batch size where you wanted it.</li>
 </ul>
-<p>Disk space needs the same care. <strong>Eval</strong> and <strong>save strategies</strong> 🔴 can be <code>"epoch"</code> or <code>"steps"</code>; with <code>"steps"</code>, <code>eval_steps</code> and <code>save_steps</code> set how often the model is evaluated and saved. Checkpoints can weigh several gigabytes, so cap how many are kept with <code>save_total_limit</code><a href="#fn15" class="footnote-ref" id="fnref15" role="doc-noteref"><sup>15</sup></a>.</p>
+<p>Disk space needs the same care. <strong>Eval</strong> and <strong>save strategies</strong> 🔴 can be <code>"epoch"</code> or <code>"steps"</code>; with <code>"steps"</code>, <code>eval_steps</code> and <code>save_steps</code> set how often the model is evaluated and saved. Checkpoints can weigh several gigabytes, so cap how many are kept with <code>save_total_limit</code><a href="#fn16" class="footnote-ref" id="fnref16" role="doc-noteref"><sup>16</sup></a>.</p>
 <div class="callout callout-style-default callout-tip callout-titled" title="Where to start">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -1187,8 +1224,8 @@ Figure&nbsp;3: Learning curve
 </section>
 <section id="sec-GPU" class="level2">
 <h2 class="anchored" data-anchor-id="sec-GPU">Use GPU for faster training</h2>
-<p>Only relevant if you have a GPU. Otherwise, training on CPU works exactly as shown, just slower; skip ahead to <a href="#sec-errors" class="quarto-xref">Section&nbsp;4.3</a>. An NVIDIA GPU<a href="#fn16" class="footnote-ref" id="fnref16" role="doc-noteref"><sup>16</sup></a> with cuda set up, or a Mac with an MX chip, accelerates training via cuda or mps respectively.</p>
-<p>Check whether cuda/mps are available<a href="#fn17" class="footnote-ref" id="fnref17" role="doc-noteref"><sup>17</sup></a>:</p>
+<p>Only relevant if you have a GPU. Otherwise, training on CPU works exactly as shown, just slower; skip ahead to <a href="#sec-errors" class="quarto-xref">Section&nbsp;4.3</a>. An NVIDIA GPU<a href="#fn17" class="footnote-ref" id="fnref17" role="doc-noteref"><sup>17</sup></a> with cuda set up, or a Mac with an MX chip, accelerates training via cuda or mps respectively.</p>
+<p>Check whether cuda/mps are available<a href="#fn18" class="footnote-ref" id="fnref18" role="doc-noteref"><sup>18</sup></a>:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> torch.cuda <span class="im">import</span> is_available <span class="im">as</span> cuda_available</span>
 <span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> torch.mps <span class="im">import</span> is_available <span class="im">as</span> mps_available</span>
 <span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -1278,7 +1315,7 @@ Figure&nbsp;3: Learning curve
 <h2 class="anchored" data-anchor-id="sec-errors">Read the errors</h2>
 <p>You will face many errors. Some are random: rerunning the script or restarting the kernel fixes them. Others are subtler: search the exact error message (genAI is often less reliable here than a forum post from someone who hit the same issue), and remember that a library version mismatch is a common root cause. The four below are the most common; treat this as a reference, not required reading.</p>
 <div class="callout callout-style-default callout-note callout-titled" title="Dataset formatting">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-9-contents" aria-controls="callout-9" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-10-contents" aria-controls="callout-10" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -1287,7 +1324,7 @@ Figure&nbsp;3: Learning curve
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-9" class="callout-9-contents callout-collapse collapse">
+<div id="callout-10" class="callout-10-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <p>Most formatting errors come from columns not matching what the code expects:</p>
 <ul>
@@ -1301,7 +1338,7 @@ Figure&nbsp;3: Learning curve
 </div>
 </div>
 <div class="callout callout-style-default callout-note callout-titled" title="Memory overflow">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-10-contents" aria-controls="callout-10" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-11-contents" aria-controls="callout-11" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -1310,7 +1347,7 @@ Figure&nbsp;3: Learning curve
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-10" class="callout-10-contents callout-collapse collapse">
+<div id="callout-11" class="callout-11-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <p>On GPU:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb38"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>NVML_SUCCESS == r INTERNAL ASSERT FAILED at "/home/conda/feedstock_root/build_artifacts/libtorch_1750199048837/work/c10/cuda/CUDACachingAllocator.cpp":1016, please report a bug to PyTorch.</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -1319,7 +1356,7 @@ Figure&nbsp;3: Learning curve
 </div>
 </div>
 <div class="callout callout-style-default callout-note callout-titled" title="Tensor shapes">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-11-contents" aria-controls="callout-11" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-12-contents" aria-controls="callout-12" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -1328,7 +1365,7 @@ Figure&nbsp;3: Learning curve
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-11" class="callout-11-contents callout-collapse collapse">
+<div id="callout-12" class="callout-12-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb39"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>ValueError: too many values to unpack (expected 2)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Usually a tokenization issue. <code>dsd["train"][0]["input_ids"].shape</code> should return <code>torch.Size([400])</code>, not <code>torch.Size([1, 400])</code>: make sure the tokenizer isn’t called with <code>return_tensors="pt"</code>, and that you use <code>dsd.with_format("torch")</code>.</p>
@@ -1336,7 +1373,7 @@ Figure&nbsp;3: Learning curve
 </div>
 </div>
 <div class="callout callout-style-default callout-note callout-titled" title="Missing keys when saving/reloading a checkpoint">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-12-contents" aria-controls="callout-12" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-13-contents" aria-controls="callout-13" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -1345,7 +1382,7 @@ Figure&nbsp;3: Learning curve
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-12" class="callout-12-contents callout-collapse collapse">
+<div id="callout-13" class="callout-13-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb40"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>There were missing keys in the checkpoint model loaded: ['bert.embeddings.LayerNorm.weight', ...</span>
 <span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>There were unexpected keys in the checkpoint model loaded: ['bert.embeddings.LayerNorm.beta', ...</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -1407,22 +1444,23 @@ Figure&nbsp;3: Learning curve
 
 <ol>
 <li id="fn1"><p>Smallest generative models weigh 16GB (<a href="https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct/tree/main">Llama-3-8B</a>) and larger ones can reach 850GB (<a href="https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro/tree/main">Deepseek-V4-pro</a>). The open weights[^open-weights] encoder models used here weigh from 500MB (<a href="https://huggingface.co/google-bert/bert-base-uncased">google-bert/bert-base-uncased</a>) to 2.3GB (<a href="https://huggingface.co/FacebookAI/xlm-roberta-large/tree/main">FacebookAI/xlm-roberta-large</a>).<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn2"><p>This is the supervised learning framework. We assume you are familiar with it and won’t recall it here (see <a href="#sec-objectives" class="quarto-xref">Section&nbsp;1.1</a>).<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn2"><p>This is the supervised learning framework, briefly recalled in a refresher at the end of <a href="#sec-objectives" class="quarto-xref">Section&nbsp;1.1</a>.<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
 <li id="fn3"><p>Most language models are built on the <strong>Transformer</strong> architecture, introduced by Google in 2017 (Vaswani et al., 2017). It is the same word behind the <code>transformers</code> Python library used throughout this tutorial.<a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
 <li id="fn4"><p>Most likely: newer models tend to be larger, see <a href="#choose-and-load-a-model">Choose and load a model</a>.<a href="#fnref4" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn5"><p><a href="https://www.youtube.com/watch?v=sDCtY9Z1bqE">Set up your cuda environment</a><a href="#fnref5" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn6"><p>Check that the model you’re using recognises emojis before deciding to keep or strip them.<a href="#fnref6" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn7"><p>Hugging Face maintains several widely used libraries (<a href="https://huggingface.co/docs/transformers/index">Transformers</a>, <a href="https://huggingface.co/docs/datasets/index">Datasets</a>, <a href="https://sbert.net/">Sentence Transformers</a>), publishes tutorials, hosts a debugging forum, and offers inference/training infrastructure if you lack the hardware.<a href="#fnref7" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn8"><p>Auto classes are ready-to-use classes that set up the right architecture for your task.<a href="#fnref8" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn9"><p>See <a href="#sec-key-concepts" class="quarto-xref">Section&nbsp;2</a> for what tokenization is and why it’s needed.<a href="#fnref9" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn10"><p>The syntax is the same whether training from scratch or fine-tuning, hence the training-related class names (<code>Trainer</code>, <code>TrainingArguments</code>…), but we are still fine-tuning a pretrained model.<a href="#fnref10" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn11"><p>Depending on the <code>save_strategy</code> you set.<a href="#fnref11" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn12"><p>“Macro” means the evaluation normalises across labels. Example in <a href="./appendices.html#sec-macro-micro">the appendices</a>.<a href="#fnref12" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn13"><p>The same log is saved in the <code>trainer_state.json</code> file of the last checkpoint, if you need it after closing your session.<a href="#fnref13" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn14"><p>Also known as L2 regularisation.<a href="#fnref14" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn15"><p>With <code>load_best_model_at_end=True</code>, the best checkpoint is always kept in addition to the most recent ones (<a href="https://huggingface.co/docs/transformers/main_classes/trainer#transformers.TrainingArguments.save_total_limit">documentation</a>).<a href="#fnref15" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn16"><p><a href="https://www.tutorialpedia.org/blog/is-it-possible-to-run-cuda-on-amd-gpus/#2-closed-source-ecosystem">AMD GPUs don’t support cuda</a>, though alternatives like <a href="https://github.com/vosen/ZLUDA">ZLUDA</a> exist.<a href="#fnref16" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn17"><p><a href="https://www.youtube.com/watch?v=pPStdjuYzSI">What is cuda in 3 minutes</a>; <a href="https://developer.nvidia.com/cuda-downloads">install cuda</a>.<a href="#fnref17" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn5"><p>The most widely used Python library for machine learning. It has had a major impact on the coding community, notably by establishing the <code>.fit</code> / <code>.transform</code> syntax.<a href="#fnref5" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn6"><p><a href="https://www.youtube.com/watch?v=sDCtY9Z1bqE">Set up your cuda environment</a><a href="#fnref6" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn7"><p>Check that the model you’re using recognises emojis before deciding to keep or strip them.<a href="#fnref7" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn8"><p>Hugging Face maintains several widely used libraries (<a href="https://huggingface.co/docs/transformers/index">Transformers</a>, <a href="https://huggingface.co/docs/datasets/index">Datasets</a>, <a href="https://sbert.net/">Sentence Transformers</a>), publishes tutorials, hosts a debugging forum, and offers inference/training infrastructure if you lack the hardware.<a href="#fnref8" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn9"><p>Auto classes are ready-to-use classes that set up the right architecture for your task.<a href="#fnref9" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn10"><p>See <a href="#sec-key-concepts" class="quarto-xref">Section&nbsp;2</a> for what tokenization is and why it’s needed.<a href="#fnref10" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn11"><p>The syntax is the same whether training from scratch or fine-tuning, hence the training-related class names (<code>Trainer</code>, <code>TrainingArguments</code>…), but we are still fine-tuning a pretrained model.<a href="#fnref11" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn12"><p>Depending on the <code>save_strategy</code> you set.<a href="#fnref12" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn13"><p>“Macro” means the evaluation normalises across labels. Example in <a href="./appendices.html#sec-macro-micro">the appendices</a>.<a href="#fnref13" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn14"><p>The same log is saved in the <code>trainer_state.json</code> file of the last checkpoint, if you need it after closing your session.<a href="#fnref14" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn15"><p>Also known as L2 regularisation.<a href="#fnref15" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn16"><p>With <code>load_best_model_at_end=True</code>, the best checkpoint is always kept in addition to the most recent ones (<a href="https://huggingface.co/docs/transformers/main_classes/trainer#transformers.TrainingArguments.save_total_limit">documentation</a>).<a href="#fnref16" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn17"><p><a href="https://www.tutorialpedia.org/blog/is-it-possible-to-run-cuda-on-amd-gpus/#2-closed-source-ecosystem">AMD GPUs don’t support cuda</a>, though alternatives like <a href="https://github.com/vosen/ZLUDA">ZLUDA</a> exist.<a href="#fnref17" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn18"><p><a href="https://www.youtube.com/watch?v=pPStdjuYzSI">What is cuda in 3 minutes</a>; <a href="https://developer.nvidia.com/cuda-downloads">install cuda</a>.<a href="#fnref18" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
 </ol>
 </section></div></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
