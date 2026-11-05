@@ -13,9 +13,9 @@ toc-depth: 3
 ---
 # Introduction
 
-Social scientists working with large corpora of documents (tweets, abstracts, newspaper articles, videos...) often need to annotate each item with one or more labels. Common strategies include hiring interns, outsourcing to a company such as MTurk, or automating the task. Since the development of LLMs, it has become common practice to use them as annotators in social science contexts (Gilardi et al., 2023; Bonikowski et al, 2022). One such study annotated 4.5 million tweets addressed to French members of parliament with the labels "attack", "critique" or "support" to describe the conditions of hate speech towards them on Twitter. In Machine Learning jargon, this is a "classification task".
+Social scientists working with large corpora of documents (tweets, abstracts, newspaper articles, videos...) often need to annotate each item with one or more labels to conduct analysis, such evolution of topics or modelisation. Common strategies include hiring interns, outsourcing to a company such as MTurk, or automating the task with various strategies. Since the development of LLMs, it has become common practice to use them as annotators in social science contexts (Gilardi et al., 2023; Bonikowski et al, 2022). For instance, cne such study annotated 4.5 million tweets addressed to French members of parliament with the labels "attack", "critique" or "support" to describe the conditions of hate speech towards them on Twitter. In Machine Learning jargon, this is a "classification task".
 
-This tutorial is part of a series on using LLMs as annotators. A companion [tutorial](https://www.css.cnrs.fr/classification-with-generative-llms-and-api-calls/) covers the generative AI (genAI) approach: writing a prompt and parsing the label out of the model's response. Here, we cover the encoder approach instead (an encoder is an LLM that does not generate text[^smaller-info]), fine-tuned on an annotated sample the way a human expert would learn the task[^supervised-learning-disclaimer]. This gives you more control over the model and its performance, at the cost of more NLP knowledge and coding skill.
+This tutorial is part of a series on using LLMs as annotators. A companion [tutorial](https://www.css.cnrs.fr/classification-with-generative-llms-and-api-calls/) covers the generative AI (genAI) approach: writing a prompt and parsing the label out of the model's response. Here, we cover another approach using specific models called encoders (an LLM that does not generate text[^smaller-info]), fine-tuned on an annotated sample the way a human expert would learn the task[^supervised-learning-disclaimer]. This gives you more control over the model and its performance, at the cost of (a bit) more NLP knowledge and coding skill.
 
 [^smaller-info]: Smallest generative models weigh 16GB ([Llama-3-8B](https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct/tree/main)) and larger ones can reach 850GB ([Deepseek-V4-pro](https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro/tree/main)). The open weights[^open-weights] encoder models used here weigh from 500MB ([google-bert/bert-base-uncased](https://huggingface.co/google-bert/bert-base-uncased)) to 2.3GB ([FacebookAI/xlm-roberta-large](https://huggingface.co/FacebookAI/xlm-roberta-large/tree/main)).
 
@@ -25,7 +25,7 @@ This tutorial is part of a series on using LLMs as annotators. A companion [tuto
 
 **Why not just use ChatGPT?** Generative models (GPT, Llama, Claude) are prompted: you describe your categories and hope the model interprets them as you would, every time. An encoder (BERT and its relatives) produces no text but an **embedding**, a numerical representation of a text's meaning[^transformer], and is **fine-tuned** on texts you label yourself. You thus control the whole pipeline: the model can only assign the categories you defined, learned from your annotations and nothing else. A generative model brings everything it learned elsewhere into each decision, and may read into a text things that are not in it. Its errors are then not random but biased: Ashwin et al. (2025) found that a generative LLM's coding errors on interviews with Rohingya refugees were correlated with respondents' characteristics, whereas a model fine-tuned on human-coded transcripts showed less bias.
 
-Encoders also keep your data **confidential**: they are light enough to run on your own machine or a trusted server[^7], so sensitive corpora never go through an external API. And they keep your results **reproducible**: closed generative models can change after an update, while you own the encoder and its fine-tuning data. Finally, they are cheaper to run on large corpora, and a few hundred annotated texts are often enough (Laurer et al., 2024; Bucher & Martini, 2024). The price is the annotation effort, more code, and a model that performs a single task.
+Using small models helps to keep your data **confidential**: encoders are light enough to run on your own machine or a trusted server[^7], so sensitive corpora never go through an external API. And they keep your results **reproducible**: closed generative models can change after an update, while you own the encoder and its fine-tuning data. Finally, they are cheaper to run on large corpora, and a few hundred annotated texts are often enough (Laurer et al., 2024; Bucher & Martini, 2024). The price is the annotation effort, more code, and a model that performs a single task. But even this cost has its avantage : you learn a lot during the annotation process.
 
 [^transformer]: Most language models are built on the **Transformer** architecture, introduced by Google in 2017 (Vaswani et al., 2017). It is the same word behind the `transformers` Python library used throughout this tutorial.
 
@@ -45,7 +45,7 @@ This tutorial will:
 
 It will **not** cover:
 
-- Python syntax: we assume you already know the language. See [Lino's course](https://pythonds.linogaliana.fr/) if you don't.
+- Python syntax: we assume you already know the language. See [Lino Galiana's course](https://pythonds.linogaliana.fr/) if you don't.
 - Supervised learning in depth: we assume you have an annotated dataset to fine-tune on, and only recall the essentials of the framework (training a classifier, splitting annotations into train, valid and test sets) and its standard metrics (precision, recall, accuracy, F1 score) in the refresher below. See the [scikit-learn user guide](https://scikit-learn.org/stable/supervised_learning.html) to go further, and Pustejovsky & Stubbs (2012) or Krippendorff (2018) for annotation.
 - The fundamentals of NLP and linguistics, beyond what's necessary here. See [Jurafsky](https://web.stanford.edu/~jurafsky/slp3/).
 - How to turn your research question into an annotation protocol: we assume you can design and motivate that yourself.
@@ -89,7 +89,7 @@ An **encoder** turns a text into an **embedding**: a numerical representation of
 
 ![Similarity between embeddings: "apple" and "pear" are close, but in the context of Apple's new product, "apple"'s embedding shifts away from "pear". For a "left/right" label, embeddings should likewise capture what sets left-wing texts apart from right-wing ones.](./assets/similarity.png){#fig-similarity width=100%}
 
-Models don't read words but **tokens**: words or pieces of words from the model's vocabulary, into which texts are split before use. Every encoder has a **context window**, the maximum number of tokens it processes at once. Anything beyond is ignored, so long texts may have to be split into sentences or paragraphs (older models read 128 to 512 tokens).
+Models don't read words but **tokens**: words or pieces of words from the model's vocabulary, into which texts are split before use. Every encoder has a **context window**, the maximum number of tokens it processes at once. Anything beyond is ignored, so long texts may have to be split into sentences or paragraphs (older models read 128 to 512 tokens). It is important for encoders since their context windows are smaller than generative models.
 
 A **pretrained** model has already learned how a language works, by reading very large amounts of general text such as Wikipedia, books or web pages. This step requires computing power and data out of reach of most research teams, so it is done by companies and research labs, who often share the resulting models publicly; this tutorial downloads its model from Hugging Face, the main platform for doing so. **Fine-tuning** adjusts its parameters slightly with your annotations, to turn it into a classifier for your own labels. It is quick: a few minutes, at most a few dozen on limited hardware.
 
@@ -132,7 +132,7 @@ We use a dataset introduced by Luo et al. (2020): sentences extracted from journ
 
 ```{mermaid}
 flowchart LR
-  A[Annotated sample] --> B[Split into<br/>train / valid / test]
+  A[Split into<br/>train / valid / test] --> B[Annotated sample (first train, then valid)]
   B --> C[Fine-tune<br/>on train]
   C --> D[Evaluate on valid]
   D -- not good enough --> E[Adjust settings]
@@ -649,7 +649,9 @@ reload_model = AutoModelForSequenceClassification.from_pretrained(
 
 ## Use model for inference and evaluate performance{#sec-evaluation}
 
-We predict labels on the valid set (@sec-preprocess), then compare against the gold annotations using standard metrics: accuracy, precision, recall, F1.
+Once you have a new fine-tuned model, you can use it on elements to predict the label. But we also need to verify that those predictions are correct.
+
+To do so, we predict labels on the valid set (@sec-preprocess), then compare against one gold annotations using standard metrics: accuracy, precision, recall, F1. We use a dedicated valid set to be able to compare different versions of a model, and different models, on the same standard.
 
 ::::{.columns}
 :::{.column-body}
