@@ -13,7 +13,7 @@ toc-depth: 3
 ---
 # Introduction
 
-Social scientists working with large corpora of documents (tweets, abstracts, newspaper articles, videos...) often need to annotate each item with one or more labels to conduct analysis, such evolution of topics or modelisation. Common strategies include hiring interns, outsourcing to a company such as MTurk, or automating the task with various strategies. Since the development of LLMs, it has become common practice to use them as annotators in social science contexts (Gilardi et al., 2023; Bonikowski et al, 2022). For instance, such study annotated 4.5 million tweets addressed to French members of parliament with the labels "attack", "critique" or "support" to describe the conditions of hate speech towards them on Twitter. In Machine Learning jargon, this is a "classification task".
+Social scientists working with large corpora of documents (tweets, abstracts, newspaper articles, videos...) often need to annotate each item with one or more labels to conduct analysis, such as the evolution of topics or modelisation. Common strategies include hiring interns, outsourcing to a company such as MTurk, or automating the task with various strategies. Since the development of LLMs, it has become common practice to use them as annotators in social science contexts (Gilardi et al., 2023; Bonikowski et al, 2022). For instance, such study annotated 4.5 million tweets addressed to French members of parliament with the labels "attack", "critique" or "support" to describe the conditions of hate speech towards them on Twitter. In Machine Learning jargon, this is a "classification task".
 
 This tutorial is part of a series on using LLMs as annotators. A companion [tutorial](https://www.css.cnrs.fr/classification-with-generative-llms-and-api-calls/) covers the generative AI (genAI) approach: writing a prompt and parsing the label out of the model's response. Here, we cover another approach using specific models called encoders (an LLM that does not generate text[^smaller-info]), fine-tuned on an annotated sample the way a human expert would learn the task[^supervised-learning-disclaimer]. This gives you more control over the model and its performance, at the cost of (a bit) more NLP knowledge and coding skill.
 
@@ -93,9 +93,11 @@ Models don't read words but **tokens**: words or pieces of words from the model'
 
 A **pretrained** model has already learned how a language works, by reading very large amounts of general text such as Wikipedia, books or web pages. This step requires computing power and data out of reach of most research teams, so it is done by companies and research labs, who often share the resulting models publicly; this tutorial downloads its model from Hugging Face, the main platform for doing so. **Fine-tuning** adjusts its parameters slightly with your annotations, to turn it into a classifier for your own labels. It is quick: a few minutes, at most a few dozen on limited hardware.
 
+An encoder only produces embeddings, so going from an embedding to a category takes one more step: we add a **classification layer** on top of the encoder. This single linear layer takes a text's embedding as input and produces one score per label, and the label with the highest score is the prediction. It starts with random parameters and learns your categories during fine-tuning, while the encoder's own parameters are adjusted slightly.
+
 Fine-tuning proceeds by small successive corrections: the model reads a **batch** of annotated texts, compares its predictions with your annotations, and adjusts its parameters slightly to reduce the gap between the two, called the **loss**. It then moves to the next batch, and repeats until it has gone through the whole train set: one **epoch**. The settings that control this loop (how many texts per batch, how large each correction is, how many epochs) are called hyperparameters; we introduce them when diagnosing training problems (@sec-hyperparameters-tuning).
 
-To check that the model learned your categories rather than memorised your examples, annotations are split into three sets: the model learns from the **train** set, you compare settings on the **valid** set, and the **test** set is kept aside for one final, unbiased score.
+To check that the model learned your categories rather than memorised your examples, annotations are split into three sets: the **train** set is used to optimise the weights by reducing the loss, the **valid** set is used during fine-tuning to measure the loss on texts that never update the weights, which shows whether the model is really learning and lets you compare settings, and the **test** set is kept aside for one final, unbiased score.
 
 :::{.callout-note collapse="true" title="Learn more about neural networks, Transformers and encoders"}
 
@@ -110,7 +112,7 @@ To check that the model learned your categories rather than memorised your examp
 
 ## Install environment
 
-This tutorial uses Python 3.12:
+This tutorial uses Python 3.14:
 
 ```bash
 pip install -qU pandas "transformers==4.52.4" datasets ipykernel matplotlib torch "accelerate>=0.26.0" scikit-learn plotly "nbformat>=4.2.0"
@@ -132,7 +134,7 @@ We use a dataset introduced by Luo et al. (2020): sentences extracted from journ
 
 ```{mermaid}
 flowchart LR
-  A[Split into<br/>train / valid / test] --> B[Annotated sample (first train, then valid)]
+  A[Split into<br/>train / valid / test] --> B["Annotated sample (first train, then valid)"]
   B --> C[Fine-tune<br/>on train]
   C --> D[Evaluate on valid]
   D -- not good enough --> E[Adjust settings]
@@ -610,23 +612,23 @@ trainer.train()
 |   Epoch |   Step |   Training loss |   Validation loss |
 |--------:|-------:|----------------:|------------------:|
 |   0.270 |     12 |          1.0120 |            0.9907 |
-|   0.539 |     24 |          1.0008 |            0.9204 |
-|   0.809 |     36 |          0.9244 |            0.8510 |
-|   1.067 |     48 |          0.7749 |            0.8047 |
-|   1.337 |     60 |          0.7288 |            0.8248 |
-|   1.607 |     72 |          0.6364 |            0.8035 |
-|   1.876 |     84 |          0.6013 |            0.8248 |
-|   2.135 |     96 |          0.5545 |            0.8105 |
-|   2.404 |    108 |          0.4433 |            0.8682 |
-|   2.674 |    120 |          0.3497 |            0.8927 |
-|   2.944 |    132 |          0.3249 |            0.9290 |
-|   3.202 |    144 |          0.2342 |            0.9748 |
-|   3.472 |    156 |          0.1716 |            1.0218 |
-|   3.742 |    168 |          0.1890 |            0.9909 |
-|   4.000 |    180 |          0.2307 |            0.9774 |
-|   4.270 |    192 |          0.1184 |            1.0162 |
-|   4.539 |    204 |          0.1343 |            1.0317 |
-|   4.809 |    216 |          0.1041 |            1.0443 |
+|   0.539 |     24 |          1.0029 |            0.9193 |
+|   0.809 |     36 |          0.9282 |            0.8474 |
+|   1.067 |     48 |          0.7735 |            0.8152 |
+|   1.337 |     60 |          0.7193 |            0.7990 |
+|   1.607 |     72 |          0.6170 |            0.8106 |
+|   1.876 |     84 |          0.6093 |            0.8353 |
+|   2.135 |     96 |          0.5534 |            0.8364 |
+|   2.404 |    108 |          0.4421 |            0.8752 |
+|   2.674 |    120 |          0.3402 |            0.9222 |
+|   2.944 |    132 |          0.3306 |            0.8981 |
+|   3.202 |    144 |          0.2273 |            0.9704 |
+|   3.472 |    156 |          0.1739 |            1.0595 |
+|   3.742 |    168 |          0.1823 |            1.0262 |
+|   4.000 |    180 |          0.2239 |            1.0096 |
+|   4.270 |    192 |          0.1150 |            1.0282 |
+|   4.539 |    204 |          0.1214 |            1.0464 |
+|   4.809 |    216 |          0.0973 |            1.0712 |
 
 Fine-tuning takes about 15 minutes on a recent laptop.
 
@@ -640,7 +642,7 @@ This produces a list of folders[^save-strategy], each holding:
 - `trainer_state.json`: metadata up to that checkpoint.
 - `training_args.bin`: a copy of the training arguments.
 
-`trainer.state.best_model_checkpoint` holds the path to the best one, where validation loss reaches its minimum: here, checkpoint 72 (`'./models/training/checkpoint-72'`), with a validation loss of 0.80. Reload a checkpoint the same way as the original model:
+`trainer.state.best_model_checkpoint` holds the path to the best one, where validation loss reaches its minimum: here, checkpoint 60 (`'./models/training/checkpoint-60'`), with a validation loss of 0.80. Reload a checkpoint the same way as the original model:
 
 ```python
 reload_model = AutoModelForSequenceClassification.from_pretrained(
@@ -651,7 +653,7 @@ reload_model = AutoModelForSequenceClassification.from_pretrained(
 
 Once you have a new fine-tuned model, you can use it on elements to predict the label. But we also need to verify that those predictions are correct.
 
-To do so, we predict labels on the valid set (@sec-preprocess), then compare against one gold annotations using standard metrics: accuracy, precision, recall, F1. We use a dedicated valid set to be able to compare different versions of a model, and different models, on the same standard.
+To do so, we predict labels on the valid set (@sec-preprocess), then compare against the gold annotations using standard metrics: accuracy, precision, recall, F1. We use a dedicated valid set to be able to compare different versions of a model, and different models, on the same standard.
 
 ::::{.columns}
 :::{.column-body}
@@ -705,9 +707,9 @@ print(classification_report(
 ```txt
               precision    recall  f1-score   support
 
-      agrees       0.67      0.73      0.70       116
+      agrees       0.71      0.62      0.66       116
    disagrees       0.64      0.48      0.55        61
-     neutral       0.69      0.73      0.71       128
+     neutral       0.66      0.82      0.73       128
 
     accuracy                           0.68       305
    macro avg       0.67      0.64      0.65       305
@@ -759,7 +761,14 @@ This section covered: knowing your corpus and preprocessing accordingly, choosin
 
 ## Diagnose and fix training problems{#sec-hyperparameters-tuning}
 
-Checkpoints from @sec-essentials include the learning curve: the loss (the gap between predicted and gold labels) tracked on the train and valid sets as training progresses. Retrieve it from the trainer[^log-on-disk] and plot it:
+Checkpoints from @sec-essentials include the learning curve, which tracks the **loss** as fine-tuning progresses. The loss measures the gap between the model's predictions and your annotations: the lower, the better. As a reference point, a model guessing at random between our 3 labels gets a loss of about 1.1, close to where our curves start.
+
+The curve shows the loss on two sets of texts (@sec-preprocess), which play different roles during fine-tuning:
+
+- The **train set** is used to optimise the weights: each correction aims to reduce the loss on these texts, so the train loss is expected to keep falling.
+- The **valid set** is also used during fine-tuning, but for inference only: at regular intervals (here every 12 steps) the model predicts the labels of these texts, and its weights are never updated from them. The valid loss therefore shows whether the model is actually learning, rather than memorising the train set, and when to stop training. Once the valid loss stops falling, more training no longer helps.
+
+Retrieve both from the trainer[^log-on-disk] and plot them:
 
 [^log-on-disk]: The same log is saved in the `trainer_state.json` file of the last checkpoint, if you need it after closing your session.
 

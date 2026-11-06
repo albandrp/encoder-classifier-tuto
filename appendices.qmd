@@ -244,12 +244,12 @@ With several labels, precision, recall and F1 are first computed for each label,
 
 | | F1 | Number of texts |
 |---|---|---|
-| agrees | 0.70 | 116 |
+| agrees | 0.66 | 116 |
 | disagrees | 0.55 | 61 |
-| neutral | 0.71 | 128 |
+| neutral | 0.73 | 128 |
 
-- The **macro** average gives each label the same weight: $(0.70 + 0.55 + 0.71) / 3 \approx 0.65$.
-- The **weighted** average weights each label by its number of texts: $(0.70 \times 116 + 0.55 \times 61 + 0.71 \times 128) / 305 \approx 0.67$.
+- The **macro** average gives each label the same weight: $(0.66 + 0.55 + 0.73) / 3 \approx 0.65$.
+- The **weighted** average weights each label by its number of texts: $(0.66 \times 116 + 0.55 \times 61 + 0.73 \times 128) / 305 \approx 0.67$.
 - The **micro** average pools all texts together before computing the score. When each text has exactly one label, micro F1 equals accuracy: 0.68.
 
 The weighted and micro averages are dominated by the frequent labels, so they partly hide the model's weaker performance on "disagrees". The macro average does not, which is why we recommend it.
