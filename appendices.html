@@ -387,7 +387,7 @@ window.Quarto = {
 <tbody>
 <tr class="odd">
 <td>agrees</td>
-<td>0.70</td>
+<td>0.66</td>
 <td>116</td>
 </tr>
 <tr class="even">
@@ -397,14 +397,14 @@ window.Quarto = {
 </tr>
 <tr class="odd">
 <td>neutral</td>
-<td>0.71</td>
+<td>0.73</td>
 <td>128</td>
 </tr>
 </tbody>
 </table>
 <ul>
-<li>The <strong>macro</strong> average gives each label the same weight: <span class="math inline">\((0.70 + 0.55 + 0.71) / 3 \approx 0.65\)</span>.</li>
-<li>The <strong>weighted</strong> average weights each label by its number of texts: <span class="math inline">\((0.70 \times 116 + 0.55 \times 61 + 0.71 \times 128) / 305 \approx 0.67\)</span>.</li>
+<li>The <strong>macro</strong> average gives each label the same weight: <span class="math inline">\((0.66 + 0.55 + 0.73) / 3 \approx 0.65\)</span>.</li>
+<li>The <strong>weighted</strong> average weights each label by its number of texts: <span class="math inline">\((0.66 \times 116 + 0.55 \times 61 + 0.73 \times 128) / 305 \approx 0.67\)</span>.</li>
 <li>The <strong>micro</strong> average pools all texts together before computing the score. When each text has exactly one label, micro F1 equals accuracy: 0.68.</li>
 </ul>
 <p>The weighted and micro averages are dominated by the frequent labels, so they partly hide the model’s weaker performance on “disagrees”. The macro average does not, which is why we recommend it.</p>

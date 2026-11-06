@@ -245,7 +245,7 @@ window.Quarto = {
     <div class="quarto-title-meta-heading">Authors</div>
     <div class="quarto-title-meta-contents">
              <p>A. Morin <a href="mailto:axel.morin@polytechnique.edu" class="quarto-title-author-email"><i class="bi bi-envelope"></i></a> </p>
-             <p>Alban Derepas <a href="mailto:alban.derepas@ensae.fr" class="quarto-title-author-email"><i class="bi bi-envelope"></i></a> </p>
+             <p>Alban Derepas <a href="mailto:alban.derepas@polytechnique.edu" class="quarto-title-author-email"><i class="bi bi-envelope"></i></a> </p>
           </div>
   </div>
     
@@ -260,10 +260,10 @@ window.Quarto = {
 
 <section id="introduction" class="level1">
 <h1>Introduction</h1>
-<p>Social scientists working with large corpora of documents (tweets, abstracts, newspaper articles, videos…) often need to annotate each item with one or more labels. Common strategies include hiring interns, outsourcing to a company such as MTurk, or automating the task. Since the development of LLMs, it has become common practice to use them as annotators in social science contexts (Gilardi et al., 2023; Bonikowski et al, 2022). One such study annotated 4.5 million tweets addressed to French members of parliament with the labels “attack”, “critique” or “support” to describe the conditions of hate speech towards them on Twitter. In Machine Learning jargon, this is a “classification task”.</p>
-<p>This tutorial is part of a series on using LLMs as annotators. A companion <a href="https://www.css.cnrs.fr/classification-with-generative-llms-and-api-calls/">tutorial</a> covers the generative AI (genAI) approach: writing a prompt and parsing the label out of the model’s response. Here, we cover the encoder approach instead (an encoder is an LLM that does not generate text<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a>), fine-tuned on an annotated sample the way a human expert would learn the task<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a>. This gives you more control over the model and its performance, at the cost of more NLP knowledge and coding skill.</p>
+<p>Social scientists working with large corpora of documents (tweets, abstracts, newspaper articles, videos…) often need to annotate each item with one or more labels to conduct analysis, such as the evolution of topics or modelisation. Common strategies include hiring interns, outsourcing to a company such as MTurk, or automating the task with various strategies. Since the development of LLMs, it has become common practice to use them as annotators in social science contexts (Gilardi et al., 2023; Bonikowski et al, 2022). For instance, such study annotated 4.5 million tweets addressed to French members of parliament with the labels “attack”, “critique” or “support” to describe the conditions of hate speech towards them on Twitter. In Machine Learning jargon, this is a “classification task”.</p>
+<p>This tutorial is part of a series on using LLMs as annotators. A companion <a href="https://www.css.cnrs.fr/classification-with-generative-llms-and-api-calls/">tutorial</a> covers the generative AI (genAI) approach: writing a prompt and parsing the label out of the model’s response. Here, we cover another approach using specific models called encoders (an LLM that does not generate text<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a>), fine-tuned on an annotated sample the way a human expert would learn the task<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a>. This gives you more control over the model and its performance, at the cost of (a bit) more NLP knowledge and coding skill.</p>
 <p><strong>Why not just use ChatGPT?</strong> Generative models (GPT, Llama, Claude) are prompted: you describe your categories and hope the model interprets them as you would, every time. An encoder (BERT and its relatives) produces no text but an <strong>embedding</strong>, a numerical representation of a text’s meaning<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a>, and is <strong>fine-tuned</strong> on texts you label yourself. You thus control the whole pipeline: the model can only assign the categories you defined, learned from your annotations and nothing else. A generative model brings everything it learned elsewhere into each decision, and may read into a text things that are not in it. Its errors are then not random but biased: Ashwin et al.&nbsp;(2025) found that a generative LLM’s coding errors on interviews with Rohingya refugees were correlated with respondents’ characteristics, whereas a model fine-tuned on human-coded transcripts showed less bias.</p>
-<p>Encoders also keep your data <strong>confidential</strong>: they are light enough to run on your own machine or a trusted server<a href="#fn4" class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a>, so sensitive corpora never go through an external API. And they keep your results <strong>reproducible</strong>: closed generative models can change after an update, while you own the encoder and its fine-tuning data. Finally, they are cheaper to run on large corpora, and a few hundred annotated texts are often enough (Laurer et al., 2024; Bucher &amp; Martini, 2024). The price is the annotation effort, more code, and a model that performs a single task.</p>
+<p>Using small models helps to keep your data <strong>confidential</strong>: encoders are light enough to run on your own machine or a trusted server<a href="#fn4" class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a>, so sensitive corpora never go through an external API. And they keep your results <strong>reproducible</strong>: closed generative models can change after an update, while you own the encoder and its fine-tuning data. Finally, they are cheaper to run on large corpora, and a few hundred annotated texts are often enough (Laurer et al., 2024; Bucher &amp; Martini, 2024). The price is the annotation effort, more code, and a model that performs a single task. But even this cost has its avantage : you learn a lot during the annotation process.</p>
 <p>This tutorial fine-tunes an <strong>encoder model</strong>: we load and format a dataset, load the model and set its hyperparameters, launch fine-tuning, assess performance, and tune hyperparameters to improve it. We close with advice on incorporating the results into a social science project, including hardware tips along the way.</p>
 <section id="sec-objectives" class="level2">
 <h2 class="anchored" data-anchor-id="sec-objectives">Objectives and materials</h2>
@@ -277,7 +277,7 @@ window.Quarto = {
 </ul>
 <p>It will <strong>not</strong> cover:</p>
 <ul>
-<li>Python syntax: we assume you already know the language. See <a href="https://pythonds.linogaliana.fr/">Lino’s course</a> if you don’t.</li>
+<li>Python syntax: we assume you already know the language. See <a href="https://pythonds.linogaliana.fr/">Lino Galiana’s course</a> if you don’t.</li>
 <li>Supervised learning in depth: we assume you have an annotated dataset to fine-tune on, and only recall the essentials of the framework (training a classifier, splitting annotations into train, valid and test sets) and its standard metrics (precision, recall, accuracy, F1 score) in the refresher below. See the <a href="https://scikit-learn.org/stable/supervised_learning.html">scikit-learn user guide</a> to go further, and Pustejovsky &amp; Stubbs (2012) or Krippendorff (2018) for annotation.</li>
 <li>The fundamentals of NLP and linguistics, beyond what’s necessary here. See <a href="https://web.stanford.edu/~jurafsky/slp3/">Jurafsky</a>.</li>
 <li>How to turn your research question into an annotation protocol: we assume you can design and motivate that yourself.</li>
@@ -337,10 +337,11 @@ Figure&nbsp;1: Similarity between embeddings: “apple” and “pear” are clo
 </figcaption>
 </figure>
 </div>
-<p>Models don’t read words but <strong>tokens</strong>: words or pieces of words from the model’s vocabulary, into which texts are split before use. Every encoder has a <strong>context window</strong>, the maximum number of tokens it processes at once. Anything beyond is ignored, so long texts may have to be split into sentences or paragraphs (older models read 128 to 512 tokens).</p>
+<p>Models don’t read words but <strong>tokens</strong>: words or pieces of words from the model’s vocabulary, into which texts are split before use. Every encoder has a <strong>context window</strong>, the maximum number of tokens it processes at once. Anything beyond is ignored, so long texts may have to be split into sentences or paragraphs (older models read 128 to 512 tokens). It is important for encoders since their context windows are smaller than generative models.</p>
 <p>A <strong>pretrained</strong> model has already learned how a language works, by reading very large amounts of general text such as Wikipedia, books or web pages. This step requires computing power and data out of reach of most research teams, so it is done by companies and research labs, who often share the resulting models publicly; this tutorial downloads its model from Hugging Face, the main platform for doing so. <strong>Fine-tuning</strong> adjusts its parameters slightly with your annotations, to turn it into a classifier for your own labels. It is quick: a few minutes, at most a few dozen on limited hardware.</p>
+<p>An encoder only produces embeddings, so going from an embedding to a category takes one more step: we add a <strong>classification layer</strong> on top of the encoder. This single linear layer takes a text’s embedding as input and produces one score per label, and the label with the highest score is the prediction. It starts with random parameters and learns your categories during fine-tuning, while the encoder’s own parameters are adjusted slightly.</p>
 <p>Fine-tuning proceeds by small successive corrections: the model reads a <strong>batch</strong> of annotated texts, compares its predictions with your annotations, and adjusts its parameters slightly to reduce the gap between the two, called the <strong>loss</strong>. It then moves to the next batch, and repeats until it has gone through the whole train set: one <strong>epoch</strong>. The settings that control this loop (how many texts per batch, how large each correction is, how many epochs) are called hyperparameters; we introduce them when diagnosing training problems (<a href="#sec-hyperparameters-tuning" class="quarto-xref">Section&nbsp;4.1</a>).</p>
-<p>To check that the model learned your categories rather than memorised your examples, annotations are split into three sets: the model learns from the <strong>train</strong> set, you compare settings on the <strong>valid</strong> set, and the <strong>test</strong> set is kept aside for one final, unbiased score.</p>
+<p>To check that the model learned your categories rather than memorised your examples, annotations are split into three sets: the <strong>train</strong> set is used to optimise the weights by reducing the loss, the <strong>valid</strong> set is used during fine-tuning to measure the loss on texts that never update the weights, which shows whether the model is really learning and lets you compare settings, and the <strong>test</strong> set is kept aside for one final, unbiased score.</p>
 <div class="callout callout-style-default callout-note callout-titled" title="Learn more about neural networks, Transformers and encoders">
 <div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-2-contents" aria-controls="callout-2" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
@@ -366,7 +367,7 @@ Figure&nbsp;1: Similarity between embeddings: “apple” and “pear” are clo
 </div>
 <section id="install-environment" class="level2">
 <h2 class="anchored" data-anchor-id="install-environment">Install environment</h2>
-<p>This tutorial uses Python 3.12:</p>
+<p>This tutorial uses Python 3.14:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install <span class="at">-qU</span> pandas <span class="st">"transformers==4.52.4"</span> datasets ipykernel matplotlib torch <span class="st">"accelerate&gt;=0.26.0"</span> scikit-learn plotly <span class="st">"nbformat&gt;=4.2.0"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p><a href="https://pytorch.org/">PyTorch</a> and <a href="https://huggingface.co/docs/transformers/index">Transformers</a> are well documented, with large communities that have already debugged most version-compatibility issues you’ll hit. We recommend a virtual environment manager such as conda<a href="#fn6" class="footnote-ref" id="fnref6" role="doc-noteref"><sup>6</sup></a>, and keeping track of your library versions to save debugging time later.</p>
 </section>
@@ -387,7 +388,7 @@ Figure&nbsp;1: Similarity between embeddings: “apple” and “pear” are clo
 <p></p><figure class="figure"><p></p>
 <div>
 <pre class="mermaid mermaid-js">flowchart LR
-  A[Annotated sample] --&gt; B[Split into&lt;br/&gt;train / valid / test]
+  A[Split into&lt;br/&gt;train / valid / test] --&gt; B["Annotated sample (first train, then valid)"]
   B --&gt; C[Fine-tune&lt;br/&gt;on train]
   C --&gt; D[Evaluate on valid]
   D -- not good enough --&gt; E[Adjust settings]
@@ -948,104 +949,104 @@ Note&nbsp;1: Model description
 <tr class="even">
 <td style="text-align: right;">0.539</td>
 <td style="text-align: right;">24</td>
-<td style="text-align: right;">1.0008</td>
-<td style="text-align: right;">0.9204</td>
+<td style="text-align: right;">1.0029</td>
+<td style="text-align: right;">0.9193</td>
 </tr>
 <tr class="odd">
 <td style="text-align: right;">0.809</td>
 <td style="text-align: right;">36</td>
-<td style="text-align: right;">0.9244</td>
-<td style="text-align: right;">0.8510</td>
+<td style="text-align: right;">0.9282</td>
+<td style="text-align: right;">0.8474</td>
 </tr>
 <tr class="even">
 <td style="text-align: right;">1.067</td>
 <td style="text-align: right;">48</td>
-<td style="text-align: right;">0.7749</td>
-<td style="text-align: right;">0.8047</td>
+<td style="text-align: right;">0.7735</td>
+<td style="text-align: right;">0.8152</td>
 </tr>
 <tr class="odd">
 <td style="text-align: right;">1.337</td>
 <td style="text-align: right;">60</td>
-<td style="text-align: right;">0.7288</td>
-<td style="text-align: right;">0.8248</td>
+<td style="text-align: right;">0.7193</td>
+<td style="text-align: right;">0.7990</td>
 </tr>
 <tr class="even">
 <td style="text-align: right;">1.607</td>
 <td style="text-align: right;">72</td>
-<td style="text-align: right;">0.6364</td>
-<td style="text-align: right;">0.8035</td>
+<td style="text-align: right;">0.6170</td>
+<td style="text-align: right;">0.8106</td>
 </tr>
 <tr class="odd">
 <td style="text-align: right;">1.876</td>
 <td style="text-align: right;">84</td>
-<td style="text-align: right;">0.6013</td>
-<td style="text-align: right;">0.8248</td>
+<td style="text-align: right;">0.6093</td>
+<td style="text-align: right;">0.8353</td>
 </tr>
 <tr class="even">
 <td style="text-align: right;">2.135</td>
 <td style="text-align: right;">96</td>
-<td style="text-align: right;">0.5545</td>
-<td style="text-align: right;">0.8105</td>
+<td style="text-align: right;">0.5534</td>
+<td style="text-align: right;">0.8364</td>
 </tr>
 <tr class="odd">
 <td style="text-align: right;">2.404</td>
 <td style="text-align: right;">108</td>
-<td style="text-align: right;">0.4433</td>
-<td style="text-align: right;">0.8682</td>
+<td style="text-align: right;">0.4421</td>
+<td style="text-align: right;">0.8752</td>
 </tr>
 <tr class="even">
 <td style="text-align: right;">2.674</td>
 <td style="text-align: right;">120</td>
-<td style="text-align: right;">0.3497</td>
-<td style="text-align: right;">0.8927</td>
+<td style="text-align: right;">0.3402</td>
+<td style="text-align: right;">0.9222</td>
 </tr>
 <tr class="odd">
 <td style="text-align: right;">2.944</td>
 <td style="text-align: right;">132</td>
-<td style="text-align: right;">0.3249</td>
-<td style="text-align: right;">0.9290</td>
+<td style="text-align: right;">0.3306</td>
+<td style="text-align: right;">0.8981</td>
 </tr>
 <tr class="even">
 <td style="text-align: right;">3.202</td>
 <td style="text-align: right;">144</td>
-<td style="text-align: right;">0.2342</td>
-<td style="text-align: right;">0.9748</td>
+<td style="text-align: right;">0.2273</td>
+<td style="text-align: right;">0.9704</td>
 </tr>
 <tr class="odd">
 <td style="text-align: right;">3.472</td>
 <td style="text-align: right;">156</td>
-<td style="text-align: right;">0.1716</td>
-<td style="text-align: right;">1.0218</td>
+<td style="text-align: right;">0.1739</td>
+<td style="text-align: right;">1.0595</td>
 </tr>
 <tr class="even">
 <td style="text-align: right;">3.742</td>
 <td style="text-align: right;">168</td>
-<td style="text-align: right;">0.1890</td>
-<td style="text-align: right;">0.9909</td>
+<td style="text-align: right;">0.1823</td>
+<td style="text-align: right;">1.0262</td>
 </tr>
 <tr class="odd">
 <td style="text-align: right;">4.000</td>
 <td style="text-align: right;">180</td>
-<td style="text-align: right;">0.2307</td>
-<td style="text-align: right;">0.9774</td>
+<td style="text-align: right;">0.2239</td>
+<td style="text-align: right;">1.0096</td>
 </tr>
 <tr class="even">
 <td style="text-align: right;">4.270</td>
 <td style="text-align: right;">192</td>
-<td style="text-align: right;">0.1184</td>
-<td style="text-align: right;">1.0162</td>
+<td style="text-align: right;">0.1150</td>
+<td style="text-align: right;">1.0282</td>
 </tr>
 <tr class="odd">
 <td style="text-align: right;">4.539</td>
 <td style="text-align: right;">204</td>
-<td style="text-align: right;">0.1343</td>
-<td style="text-align: right;">1.0317</td>
+<td style="text-align: right;">0.1214</td>
+<td style="text-align: right;">1.0464</td>
 </tr>
 <tr class="even">
 <td style="text-align: right;">4.809</td>
 <td style="text-align: right;">216</td>
-<td style="text-align: right;">0.1041</td>
-<td style="text-align: right;">1.0443</td>
+<td style="text-align: right;">0.0973</td>
+<td style="text-align: right;">1.0712</td>
 </tr>
 </tbody>
 </table>
@@ -1058,14 +1059,15 @@ Note&nbsp;1: Model description
 <li><code>trainer_state.json</code>: metadata up to that checkpoint.</li>
 <li><code>training_args.bin</code>: a copy of the training arguments.</li>
 </ul>
-<p><code>trainer.state.best_model_checkpoint</code> holds the path to the best one, where validation loss reaches its minimum: here, checkpoint 72 (<code>'./models/training/checkpoint-72'</code>), with a validation loss of 0.80. Reload a checkpoint the same way as the original model:</p>
+<p><code>trainer.state.best_model_checkpoint</code> holds the path to the best one, where validation loss reaches its minimum: here, checkpoint 60 (<code>'./models/training/checkpoint-60'</code>), with a validation loss of 0.80. Reload a checkpoint the same way as the original model:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>reload_model <span class="op">=</span> AutoModelForSequenceClassification.from_pretrained(</span>
 <span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>    trainer.state.best_model_checkpoint)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 </section>
 <section id="sec-evaluation" class="level2 page-columns page-full">
 <h2 class="anchored" data-anchor-id="sec-evaluation">Use model for inference and evaluate performance</h2>
-<p>We predict labels on the valid set (<a href="#sec-preprocess" class="quarto-xref">Section&nbsp;3.1</a>), then compare against the gold annotations using standard metrics: accuracy, precision, recall, F1.</p>
+<p>Once you have a new fine-tuned model, you can use it on elements to predict the label. But we also need to verify that those predictions are correct.</p>
+<p>To do so, we predict labels on the valid set (<a href="#sec-preprocess" class="quarto-xref">Section&nbsp;3.1</a>), then compare against the gold annotations using standard metrics: accuracy, precision, recall, F1. We use a dedicated valid set to be able to compare different versions of a model, and different models, on the same standard.</p>
 <div class="columns page-columns page-full">
 <div class="column-body">
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
@@ -1116,9 +1118,9 @@ Note
 <span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb30"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>              precision    recall  f1-score   support</span>
 <span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>      agrees       0.67      0.73      0.70       116</span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>      agrees       0.71      0.62      0.66       116</span>
 <span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>   disagrees       0.64      0.48      0.55        61</span>
-<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>     neutral       0.69      0.73      0.71       128</span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>     neutral       0.66      0.82      0.73       128</span>
 <span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a>    accuracy                           0.68       305</span>
 <span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a>   macro avg       0.67      0.64      0.65       305</span>
@@ -1165,7 +1167,13 @@ Note
 <h1>Training pipeline: advanced practices</h1>
 <section id="sec-hyperparameters-tuning" class="level2">
 <h2 class="anchored" data-anchor-id="sec-hyperparameters-tuning">Diagnose and fix training problems</h2>
-<p>Checkpoints from <a href="#sec-essentials" class="quarto-xref">Section&nbsp;3</a> include the learning curve: the loss (the gap between predicted and gold labels) tracked on the train and valid sets as training progresses. Retrieve it from the trainer<a href="#fn14" class="footnote-ref" id="fnref14" role="doc-noteref"><sup>14</sup></a> and plot it:</p>
+<p>Checkpoints from <a href="#sec-essentials" class="quarto-xref">Section&nbsp;3</a> include the learning curve, which tracks the <strong>loss</strong> as fine-tuning progresses. The loss measures the gap between the model’s predictions and your annotations: the lower, the better. As a reference point, a model guessing at random between our 3 labels gets a loss of about 1.1, close to where our curves start.</p>
+<p>The curve shows the loss on two sets of texts (<a href="#sec-preprocess" class="quarto-xref">Section&nbsp;3.1</a>), which play different roles during fine-tuning:</p>
+<ul>
+<li>The <strong>train set</strong> is used to optimise the weights: each correction aims to reduce the loss on these texts, so the train loss is expected to keep falling.</li>
+<li>The <strong>valid set</strong> is also used during fine-tuning, but for inference only: at regular intervals (here every 12 steps) the model predicts the labels of these texts, and its weights are never updated from them. The valid loss therefore shows whether the model is actually learning, rather than memorising the train set, and when to stop training. Once the valid loss stops falling, more training no longer helps.</li>
+</ul>
+<p>Retrieve both from the trainer<a href="#fn14" class="footnote-ref" id="fnref14" role="doc-noteref"><sup>14</sup></a> and plot them:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> plotly.express <span class="im">as</span> px</span>
 <span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>loss <span class="op">=</span> []</span>
