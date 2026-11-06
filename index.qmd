@@ -6,7 +6,7 @@ author:
       email: axel.morin@polytechnique.edu
       role: "Author"
     - name: Alban Derepas
-      email: alban.derepas@ensae.fr
+      email: alban.derepas@polytechnique.edu
       role: "Author"
 toc: true
 toc-depth: 3
