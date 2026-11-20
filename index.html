@@ -9,7 +9,7 @@
 <meta name="author" content="A. Morin">
 <meta name="author" content="Alban Derepas">
 
-<title>Augmented Social Scientist: train encoder models on a classification task – Augmented tuto</title>
+<title>Annotating Text at Scale with Encoders – Augmented tuto</title>
 <style>
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
@@ -191,12 +191,10 @@ window.Quarto = {
   <ul>
   <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction">Introduction</a>
   <ul class="collapse">
-  <li><a href="#sec-objectives" id="toc-sec-objectives" class="nav-link" data-scroll-target="#sec-objectives">Objectives and materials</a></li>
+  <li><a href="#sec-objectives" id="toc-sec-objectives" class="nav-link" data-scroll-target="#sec-objectives">Objectives</a></li>
+  <li><a href="#sec-requirements" id="toc-sec-requirements" class="nav-link" data-scroll-target="#sec-requirements">Requirements</a></li>
   </ul></li>
-  <li><a href="#sec-key-concepts" id="toc-sec-key-concepts" class="nav-link" data-scroll-target="#sec-key-concepts">Key concepts and valuable resources to start your NLP journey</a>
-  <ul class="collapse">
-  <li><a href="#install-environment" id="toc-install-environment" class="nav-link" data-scroll-target="#install-environment">Install environment</a></li>
-  </ul></li>
+  <li><a href="#sec-key-concepts" id="toc-sec-key-concepts" class="nav-link" data-scroll-target="#sec-key-concepts">Key concepts and valuable resources</a></li>
   <li><a href="#sec-essentials" id="toc-sec-essentials" class="nav-link" data-scroll-target="#sec-essentials">Fine-tuning pipeline: the essential</a>
   <ul class="collapse">
   <li><a href="#sec-preprocess" id="toc-sec-preprocess" class="nav-link" data-scroll-target="#sec-preprocess">Load and preprocess your data</a></li>
@@ -214,13 +212,13 @@ window.Quarto = {
   <li><a href="#sec-predict" id="toc-sec-predict" class="nav-link" data-scroll-target="#sec-predict">Predict labels for the full dataset</a></li>
   <li><a href="#sec-essentials-conclusion" id="toc-sec-essentials-conclusion" class="nav-link" data-scroll-target="#sec-essentials-conclusion">Conclusion</a></li>
   </ul></li>
-  <li><a href="#sec-advanced" id="toc-sec-advanced" class="nav-link" data-scroll-target="#sec-advanced">Training pipeline: advanced practices</a>
+  <li><a href="#sec-advanced" id="toc-sec-advanced" class="nav-link" data-scroll-target="#sec-advanced">Training pipeline: Tips for Advanced Users</a>
   <ul class="collapse">
   <li><a href="#sec-hyperparameters-tuning" id="toc-sec-hyperparameters-tuning" class="nav-link" data-scroll-target="#sec-hyperparameters-tuning">Diagnose and fix training problems</a></li>
   <li><a href="#sec-GPU" id="toc-sec-GPU" class="nav-link" data-scroll-target="#sec-GPU">Use GPU for faster training</a></li>
   <li><a href="#sec-errors" id="toc-sec-errors" class="nav-link" data-scroll-target="#sec-errors">Read the errors</a></li>
   </ul></li>
-  <li><a href="#some-good-practices" id="toc-some-good-practices" class="nav-link" data-scroll-target="#some-good-practices">Some good practices</a>
+  <li><a href="#good-practices" id="toc-good-practices" class="nav-link" data-scroll-target="#good-practices">Good Practices</a>
   <ul class="collapse">
   <li><a href="#save-your-model-and-results" id="toc-save-your-model-and-results" class="nav-link" data-scroll-target="#save-your-model-and-results">Save your model and results</a></li>
   </ul></li>
@@ -234,7 +232,7 @@ window.Quarto = {
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">Augmented Social Scientist: train encoder models on a classification task</h1>
+<h1 class="title">Annotating Text at Scale with Encoders</h1>
 </div>
 
 
@@ -260,13 +258,38 @@ window.Quarto = {
 
 <section id="introduction" class="level1">
 <h1>Introduction</h1>
-<p>Social scientists working with large corpora of documents (tweets, abstracts, newspaper articles, videos…) often need to annotate each item with one or more labels to conduct analysis, such as the evolution of topics or modelisation. Common strategies include hiring interns, outsourcing to a company such as MTurk, or automating the task with various strategies. Since the development of LLMs, it has become common practice to use them as annotators in social science contexts (Gilardi et al., 2023; Bonikowski et al, 2022). For instance, such study annotated 4.5 million tweets addressed to French members of parliament with the labels “attack”, “critique” or “support” to describe the conditions of hate speech towards them on Twitter. In Machine Learning jargon, this is a “classification task”.</p>
-<p>This tutorial is part of a series on using LLMs as annotators. A companion <a href="https://www.css.cnrs.fr/classification-with-generative-llms-and-api-calls/">tutorial</a> covers the generative AI (genAI) approach: writing a prompt and parsing the label out of the model’s response. Here, we cover another approach using specific models called encoders (an LLM that does not generate text<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a>), fine-tuned on an annotated sample the way a human expert would learn the task<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a>. This gives you more control over the model and its performance, at the cost of (a bit) more NLP knowledge and coding skill.</p>
-<p><strong>Why not just use ChatGPT?</strong> Generative models (GPT, Llama, Claude) are prompted: you describe your categories and hope the model interprets them as you would, every time. An encoder (BERT and its relatives) produces no text but an <strong>embedding</strong>, a numerical representation of a text’s meaning<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a>, and is <strong>fine-tuned</strong> on texts you label yourself. You thus control the whole pipeline: the model can only assign the categories you defined, learned from your annotations and nothing else. A generative model brings everything it learned elsewhere into each decision, and may read into a text things that are not in it. Its errors are then not random but biased: Ashwin et al.&nbsp;(2025) found that a generative LLM’s coding errors on interviews with Rohingya refugees were correlated with respondents’ characteristics, whereas a model fine-tuned on human-coded transcripts showed less bias.</p>
-<p>Using small models helps to keep your data <strong>confidential</strong>: encoders are light enough to run on your own machine or a trusted server<a href="#fn4" class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a>, so sensitive corpora never go through an external API. And they keep your results <strong>reproducible</strong>: closed generative models can change after an update, while you own the encoder and its fine-tuning data. Finally, they are cheaper to run on large corpora, and a few hundred annotated texts are often enough (Laurer et al., 2024; Bucher &amp; Martini, 2024). The price is the annotation effort, more code, and a model that performs a single task. But even this cost has its avantage : you learn a lot during the annotation process.</p>
+<div class="callout callout-style-default callout-tip callout-titled" title="A code-free alternative: ActiveTigger">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Tip</span>A code-free alternative: ActiveTigger
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Everything in this tutorial can also be done without writing code, using <a href="https://www.css.cnrs.fr/active-tigger/">ActiveTigger</a>, open-source software designed by and for social scientists for collaborative annotation and code-free fine-tuning.</p>
+</div>
+</div>
+<p>Social scientists working with large corpora of documents (tweets, abstracts, newspaper articles, videos…) often need to annotate each item with one or more labels to conduct analysis, such as the evolution of topics or modelisation. Common strategies include hiring interns, outsourcing to a company such as MTurk, or automating the task with various strategies. Since the development of LLMs, it has become common practice to use them as annotators in social science contexts (Gilardi et al., 2023; Do et al., 2024). For instance, such study annotated 4.5 million tweets addressed to French members of parliament with the labels “attack”, “critique” or “support” to describe the conditions of hate speech towards them on Twitter. In Machine Learning jargon, this is a “classification task”.</p>
+<p>This tutorial is part of a series on using LLMs as annotators. A companion <a href="https://www.css.cnrs.fr/classification-with-generative-llms-and-api-calls/">tutorial</a> covers the generative AI (genAI) approach: writing a prompt and parsing the label out of the model’s response. Here, we cover another approach using specific models called encoders (an LLM that does not generate text<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a>), fine-tuned on an annotated sample the way a human expert would learn the task<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a>. This gives you more control over the model and its performance, at the cost of a bit more NLP knowledge and coding skill, unless you use a dedicated tool with a no-code interface such as <a href="https://www.css.cnrs.fr/active-tigger/">ActiveTigger</a>.</p>
+<div class="callout callout-style-default callout-tip callout-titled" title="Why not just use ChatGPT?">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Tip</span>Why not just use ChatGPT?
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Generative models (GPT, Llama, Claude) are prompted: you describe your categories and hope the model interprets them as you would, every time. An encoder (BERT and its relatives) produces no text but an <strong>embedding</strong>, a numerical representation of a text’s meaning<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a>, and is <strong>fine-tuned</strong> on texts you label yourself. You thus control the whole pipeline: the model can only assign the categories you defined, learned from your annotations and nothing else. A generative model brings everything it learned elsewhere into each decision, and may read into a text things that are not in it. Its errors are then not random but biased: Ashwin et al.&nbsp;(2025) found that a generative LLM’s coding errors on interviews with Rohingya refugees were correlated with respondents’ characteristics, whereas a model fine-tuned on human-coded transcripts showed less bias.</p>
+<p>Using small models helps to keep your data <strong>confidential</strong>: encoders are light enough to run on your own machine or a trusted server<a href="#fn4" class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a>, so sensitive corpora never go through an external API. And they keep your results <strong>reproducible</strong>: closed generative models can change after an update, while you own the encoder and its fine-tuning data. Finally, they are cheaper to run on large corpora, and a few hundred annotated texts are often enough (Laurer et al., 2024; Bucher &amp; Martini, 2024). The price is the annotation effort, more code, and a model that performs a single task. But even this cost has an advantage: you learn a lot during the annotation process.</p>
+</div>
+</div>
 <p>This tutorial fine-tunes an <strong>encoder model</strong>: we load and format a dataset, load the model and set its hyperparameters, launch fine-tuning, assess performance, and tune hyperparameters to improve it. We close with advice on incorporating the results into a social science project, including hardware tips along the way.</p>
 <section id="sec-objectives" class="level2">
-<h2 class="anchored" data-anchor-id="sec-objectives">Objectives and materials</h2>
+<h2 class="anchored" data-anchor-id="sec-objectives">Objectives</h2>
 <p>This tutorial will:</p>
 <ul>
 <li>Identify the main NLP concepts needed to work with encoder models.</li>
@@ -278,13 +301,12 @@ window.Quarto = {
 <p>It will <strong>not</strong> cover:</p>
 <ul>
 <li>Python syntax: we assume you already know the language. See <a href="https://pythonds.linogaliana.fr/">Lino Galiana’s course</a> if you don’t.</li>
-<li>Supervised learning in depth: we assume you have an annotated dataset to fine-tune on, and only recall the essentials of the framework (training a classifier, splitting annotations into train, valid and test sets) and its standard metrics (precision, recall, accuracy, F1 score) in the refresher below. See the <a href="https://scikit-learn.org/stable/supervised_learning.html">scikit-learn user guide</a> to go further, and Pustejovsky &amp; Stubbs (2012) or Krippendorff (2018) for annotation.</li>
+<li>Supervised learning in depth: we assume you have an annotated dataset to fine-tune on. The general framework (training a classifier, splitting annotations into train, valid and test sets) and its standard metrics (precision, recall, accuracy, F1 score) are only recalled in the refresher below, and <a href="#sec-key-concepts" class="quarto-xref">Section&nbsp;2</a> introduces what is specific to encoder models. See the <a href="https://scikit-learn.org/stable/supervised_learning.html">scikit-learn user guide</a> to go further, and Pustejovsky &amp; Stubbs (2012) or Krippendorff (2018) for annotation.</li>
 <li>The fundamentals of NLP and linguistics, beyond what’s necessary here. See <a href="https://web.stanford.edu/~jurafsky/slp3/">Jurafsky</a>.</li>
 <li>How to turn your research question into an annotation protocol: we assume you can design and motivate that yourself.</li>
 </ul>
-<p>A notebook with all cells pre-run is available <a href="https://github.com/albandrp/encoder-classifier-tuto/blob/main/tuto.ipynb">here</a>.</p>
 <div class="callout callout-style-default callout-note callout-titled" title="Refresher: the classification task in machine learning">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-1-contents" aria-controls="callout-1" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-3-contents" aria-controls="callout-3" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -293,7 +315,7 @@ window.Quarto = {
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-1" class="callout-1-contents callout-collapse collapse">
+<div id="callout-3" class="callout-3-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <p>The classification task is a concept from machine learning: an algorithm uses input data (the predictors) to assign a class, or label, to each input. <a href="https://scikit-learn.org/stable/">Scikit-learn</a><a href="#fn5" class="footnote-ref" id="fnref5" role="doc-noteref"><sup>5</sup></a> puts it this way: <em>Identifying which category an object belongs to.</em> The connection with annotation is direct: each text needs to be assigned a label, so annotating is a classification task.</p>
 <p>Classification belongs to the <strong>supervised learning</strong> family: to assign labels, the algorithm must first be <strong>fitted</strong> on <strong>training data</strong>, <em>in our case handmade annotations</em>. Fitting (or training) consists of providing inputs and their labels, so that the algorithm adapts to the task and <em>“learns”</em> it. Social scientists therefore first need to annotate a small set of texts to train the classifier.</p>
@@ -321,12 +343,24 @@ window.Quarto = {
 </div>
 </div>
 </section>
+<section id="sec-requirements" class="level2">
+<h2 class="anchored" data-anchor-id="sec-requirements">Requirements</h2>
+<p><strong>A computer</strong>: a recent laptop is enough, fine-tuning takes about 15 minutes on one, and a GPU makes it faster (<a href="#sec-GPU" class="quarto-xref">Section&nbsp;4.2</a>). Plan for about 3 GB of free disk space, for the model and the checkpoints saved during fine-tuning, and an internet connection to download the data and the model.</p>
+<p><strong>A Python 3.14 environment</strong> with the following packages:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install <span class="at">-qU</span> pandas <span class="st">"transformers==4.52.4"</span> datasets ipykernel matplotlib torch <span class="st">"accelerate&gt;=0.26.0"</span> scikit-learn plotly <span class="st">"nbformat&gt;=4.2.0"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><a href="https://pytorch.org/">PyTorch</a> and <a href="https://huggingface.co/docs/transformers/index">Transformers</a> are well documented, with large communities that have already debugged most version-compatibility issues you’ll hit. We recommend a virtual environment manager such as conda<a href="#fn6" class="footnote-ref" id="fnref6" role="doc-noteref"><sup>6</sup></a>, and keeping track of your library versions to save debugging time later.</p>
+<p><strong>The companion notebook</strong> (optional): it contains all the tutorial’s code, with every cell pre-run, and is available <a href="https://github.com/albandrp/encoder-classifier-tuto/blob/main/tuto.ipynb">here</a>.</p>
+</section>
 </section>
 <section id="sec-key-concepts" class="level1">
-<h1>Key concepts and valuable resources to start your NLP journey</h1>
+<h1>Key concepts and valuable resources</h1>
 <p>This tutorial <strong>fine-tunes</strong> a <strong>pretrained</strong> <strong>encoder</strong> model to perform a <strong>classification</strong> task. This section explains these terms, at a level sufficient to follow the rest of the tutorial.</p>
-<p>The models used here are <strong>neural networks</strong>. Their behaviour is entirely determined by a large set of adjustable quantities called <strong>parameters</strong> (also known as weights and biases), and <strong>training</strong> a model means adjusting these parameters until it produces the output you expect.</p>
-<p>An <strong>encoder</strong> turns a text into an <strong>embedding</strong>: a numerical representation of its meaning. Texts close in meaning get close embeddings, a proximity measured by a similarity score (<a href="#fig-similarity" class="quarto-xref">Figure&nbsp;1</a>). BERT (Devlin et al., 2019) is the best-known encoder; CamemBERT (French), RoBERTa and ModernBERT are later variants. This tutorial uses <code>bert-base-uncased</code>.</p>
+<p><strong>Encoder models</strong></p>
+<ul>
+<li><strong>Neural networks and parameters</strong>: the models used here are neural networks. Their behaviour is entirely determined by a large set of adjustable quantities called <strong>parameters</strong> (also known as weights and biases), and <strong>training</strong> a model means adjusting these parameters until it produces the output you expect.</li>
+<li><strong>Encoders and embeddings</strong>: an <strong>encoder</strong> turns a text into an <strong>embedding</strong>, a numerical representation of its meaning. Texts close in meaning get close embeddings, a proximity measured by a similarity score (<a href="#fig-similarity" class="quarto-xref">Figure&nbsp;1</a>). BERT (Devlin et al., 2019) is the best-known encoder, and most encoders in use today are its descendants: RoBERTa, DeBERTa and ModernBERT improve its training or architecture, while CamemBERT and XLM-RoBERTa retrain it on French and on about 100 languages. Encoders built differently exist, such as ELECTRA (Clark et al., 2020), trained to spot replaced words rather than guess hidden ones, but they are less common for classification. This tutorial uses <code>bert-base-uncased</code>.</li>
+<li><strong>Tokens and context window</strong>: models don’t read words but <strong>tokens</strong>, words or pieces of words from the model’s vocabulary, into which texts are split before use. Every encoder has a <strong>context window</strong>, the maximum number of tokens it processes at once. Anything beyond is ignored, so long texts may have to be split into sentences or paragraphs (older models read 128 to 512 tokens). This matters for encoders, whose context windows are much smaller than those of generative models.</li>
+</ul>
 <div id="fig-similarity" class="quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-float-fig figure">
 <div aria-describedby="fig-similarity-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
@@ -337,13 +371,21 @@ Figure&nbsp;1: Similarity between embeddings: “apple” and “pear” are clo
 </figcaption>
 </figure>
 </div>
-<p>Models don’t read words but <strong>tokens</strong>: words or pieces of words from the model’s vocabulary, into which texts are split before use. Every encoder has a <strong>context window</strong>, the maximum number of tokens it processes at once. Anything beyond is ignored, so long texts may have to be split into sentences or paragraphs (older models read 128 to 512 tokens). It is important for encoders since their context windows are smaller than generative models.</p>
-<p>A <strong>pretrained</strong> model has already learned how a language works, by reading very large amounts of general text such as Wikipedia, books or web pages. This step requires computing power and data out of reach of most research teams, so it is done by companies and research labs, who often share the resulting models publicly; this tutorial downloads its model from Hugging Face, the main platform for doing so. <strong>Fine-tuning</strong> adjusts its parameters slightly with your annotations, to turn it into a classifier for your own labels. It is quick: a few minutes, at most a few dozen on limited hardware.</p>
-<p>An encoder only produces embeddings, so going from an embedding to a category takes one more step: we add a <strong>classification layer</strong> on top of the encoder. This single linear layer takes a text’s embedding as input and produces one score per label, and the label with the highest score is the prediction. It starts with random parameters and learns your categories during fine-tuning, while the encoder’s own parameters are adjusted slightly.</p>
-<p>Fine-tuning proceeds by small successive corrections: the model reads a <strong>batch</strong> of annotated texts, compares its predictions with your annotations, and adjusts its parameters slightly to reduce the gap between the two, called the <strong>loss</strong>. It then moves to the next batch, and repeats until it has gone through the whole train set: one <strong>epoch</strong>. The settings that control this loop (how many texts per batch, how large each correction is, how many epochs) are called hyperparameters; we introduce them when diagnosing training problems (<a href="#sec-hyperparameters-tuning" class="quarto-xref">Section&nbsp;4.1</a>).</p>
-<p>To check that the model learned your categories rather than memorised your examples, annotations are split into three sets: the <strong>train</strong> set is used to optimise the weights by reducing the loss, the <strong>valid</strong> set is used during fine-tuning to measure the loss on texts that never update the weights, which shows whether the model is really learning and lets you compare settings, and the <strong>test</strong> set is kept aside for one final, unbiased score.</p>
+<p><strong>From a pretrained model to a classifier</strong></p>
+<ul>
+<li><strong>Pretrained model</strong>: a model that has already learned how a language works, by reading very large amounts of general text such as Wikipedia, books or web pages. This step requires computing power and data out of reach of most research teams, so it is done by companies and research labs, who often share the resulting models publicly; this tutorial downloads its model from Hugging Face, the main platform for doing so.</li>
+<li><strong>Fine-tuning</strong>: adjusting the pretrained model’s parameters slightly with your annotations, to turn it into a classifier for your own labels. It is quick: a few minutes, at most a few dozen on limited hardware.</li>
+<li><strong>Classification layer</strong>: an encoder only produces embeddings, so going from an embedding to a category takes one more step. We add a classification layer on top of the encoder: this single linear layer takes a text’s embedding as input and produces one score per label, and the label with the highest score is the prediction. It starts with random parameters and learns your categories during fine-tuning, while the encoder’s own parameters are adjusted slightly.</li>
+</ul>
+<p><strong>How fine-tuning works</strong></p>
+<ul>
+<li><strong>Batch and loss</strong>: fine-tuning proceeds by small successive corrections. The model reads a <strong>batch</strong> of annotated texts, compares its predictions with your annotations, and adjusts its parameters slightly to reduce the gap between the two, called the <strong>loss</strong>.</li>
+<li><strong>Epoch</strong>: the model then moves to the next batch, and repeats until it has gone through the whole train set: one <strong>epoch</strong>.</li>
+<li><strong>Hyperparameters</strong>: the settings that control this loop (how many texts per batch, how large each correction is, how many epochs). We introduce them when diagnosing training problems (<a href="#sec-hyperparameters-tuning" class="quarto-xref">Section&nbsp;4.1</a>).</li>
+<li><strong>Train, valid and test sets</strong>: to check that the model learned your categories rather than memorised your examples, annotations are split into three sets. The <strong>train</strong> set is used to optimise the weights by reducing the loss. The <strong>valid</strong> set is used during fine-tuning to measure the loss on texts that never update the weights, which shows whether the model is really learning and lets you compare settings. The <strong>test</strong> set is kept aside for one final, unbiased score.</li>
+</ul>
 <div class="callout callout-style-default callout-note callout-titled" title="Learn more about neural networks, Transformers and encoders">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-2-contents" aria-controls="callout-2" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-4-contents" aria-controls="callout-4" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -352,7 +394,7 @@ Figure&nbsp;1: Similarity between embeddings: “apple” and “pear” are clo
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-2" class="callout-2-contents callout-collapse collapse">
+<div id="callout-4" class="callout-4-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <ul>
 <li><a href="https://www.youtube.com/playlist?list=PLZHQObOWTQDNU6R1_67000Dx_ZCJB-3pi">3Blue1Brown, <em>Neural networks</em></a>: a visual, intuition-first video series, a good entry point with no prior exposure.</li>
@@ -365,16 +407,11 @@ Figure&nbsp;1: Similarity between embeddings: “apple” and “pear” are clo
 </div>
 </div>
 </div>
-<section id="install-environment" class="level2">
-<h2 class="anchored" data-anchor-id="install-environment">Install environment</h2>
-<p>This tutorial uses Python 3.14:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install <span class="at">-qU</span> pandas <span class="st">"transformers==4.52.4"</span> datasets ipykernel matplotlib torch <span class="st">"accelerate&gt;=0.26.0"</span> scikit-learn plotly <span class="st">"nbformat&gt;=4.2.0"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p><a href="https://pytorch.org/">PyTorch</a> and <a href="https://huggingface.co/docs/transformers/index">Transformers</a> are well documented, with large communities that have already debugged most version-compatibility issues you’ll hit. We recommend a virtual environment manager such as conda<a href="#fn6" class="footnote-ref" id="fnref6" role="doc-noteref"><sup>6</sup></a>, and keeping track of your library versions to save debugging time later.</p>
-</section>
 </section>
 <section id="sec-essentials" class="level1 page-columns page-full">
 <h1>Fine-tuning pipeline: the essential</h1>
-<p>We use a dataset introduced by Luo et al.&nbsp;(2020): sentences extracted from journal articles, each annotated as “agreeing”, “neutral” or “disagreeing” with the statement “Climate change/global warming is a serious concern”. The pipeline:</p>
+<p>Now it’s time to move from theory to practice and fine-tune an encoder model for text classification. As an example, we take the classification task of Luo et al.&nbsp;(2020), who studied how news media present opinions on global warming: each sentence extracted from news articles is labelled as “agreeing”, “neutral” or “disagreeing” with the statement “Climate change/global warming is a serious concern”. To fine-tune our model, we use the annotated dataset the authors released with their article.</p>
+<p>The pipeline has five steps, each covered by one of the following sections:</p>
 <ul>
 <li>Load, clean and split your data into train, valid and test sets.</li>
 <li>Choose a model from Hugging Face and load it locally.</li>
@@ -404,7 +441,8 @@ Figure&nbsp;1: Similarity between embeddings: “apple” and “pear” are clo
 </div>
 <section id="sec-preprocess" class="level2">
 <h2 class="anchored" data-anchor-id="sec-preprocess">Load and preprocess your data</h2>
-<p>Data is available on the <a href="https://github.com/yiweiluo/GWStance/tree/master">project’s GitHub repository</a>:</p>
+<p>First step of the pipeline: before fine-tuning anything, we need to know what the annotated data looks like, clean it, and split it into the three sets the model will learn from and be evaluated on.</p>
+<p>The data is available on the <a href="https://github.com/yiweiluo/GWStance/tree/master">project’s GitHub repository</a>. We read it into a pandas DataFrame and display its first rows:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>url <span class="op">=</span> <span class="st">"https://raw.githubusercontent.com/yiweiluo/GWStance/refs/heads/master/3_stance_detection/1_MTurk/full_annotations.tsv"</span></span>
@@ -468,9 +506,11 @@ Figure&nbsp;1: Similarity between embeddings: “apple” and “pear” are clo
 </tbody>
 </table>
 <p>The columns that matter: <code>sentence</code> (the text to annotate), <code>MACE_pred</code> (the debiased final label, built from several MTurk workers’ annotations via the MACE framework), and <code>av_rating</code> (their average rating). <code>worker_#N</code> holds individual annotations; <code>disagree</code>/<code>agree</code>/<code>neutral</code>/<code>round</code>/<code>batch</code> are empty or irrelevant here. <code>sent_id</code> is not unique.</p>
+<p>We keep only the four columns we need, and rename <code>MACE_pred</code> to the clearer <code>label_text</code>:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> df_raw.loc[:,[<span class="st">"sent_id"</span>, <span class="st">"sentence"</span>, <span class="st">"MACE_pred"</span>, <span class="st">"av_rating"</span>]]</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> df.rename(columns<span class="op">=</span>{<span class="st">"MACE_pred"</span> : <span class="st">"label_text"</span>}) <span class="co"># Rename MACE_pred for conveniency</span></span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>df</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Then we count how many sentences carry each label:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>df.groupby([<span class="st">"label_text"</span>]).size()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>label_text</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>agrees       871</span>
@@ -479,9 +519,9 @@ Figure&nbsp;1: Similarity between embeddings: “apple” and “pear” are clo
 <span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>dtype: int64</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Classes are imbalanced: “disagrees” has about half as many examples, which will make it harder to classify well.</p>
 <p>A few preprocessing essentials:</p>
-<p><strong>A unique ID</strong>, since <code>sent_id</code> isn’t one:</p>
+<p><strong>A unique ID</strong>, since <code>sent_id</code> isn’t one. We number the rows from <code>ID-0000</code> onwards, so that each prediction can later be matched to its text:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>df[<span class="st">"ID"</span>] <span class="op">=</span> [<span class="ss">f'ID-</span><span class="sc">{</span>i<span class="sc">:04}</span><span class="ss">'</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="bu">len</span>(df))]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p><strong>Document length</strong>: check it fits the model’s context window (<a href="#sec-key-concepts" class="quarto-xref">Section&nbsp;2</a>), and catch obvious issues such as empty texts:</p>
+<p><strong>Document length</strong>: check it fits the model’s context window (<a href="#sec-key-concepts" class="quarto-xref">Section&nbsp;2</a>), and catch obvious issues such as empty texts. We compute each sentence’s length in characters (a rough proxy for its number of tokens), plot its distribution, and print summary statistics:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>df[<span class="st">"sentence-len"</span>] <span class="op">=</span> df[<span class="st">"sentence"</span>].<span class="bu">apply</span>(<span class="bu">len</span>)</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>df[<span class="st">"sentence-len"</span>].hist()</span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>df[<span class="st">"sentence-len"</span>].describe()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -505,7 +545,7 @@ Figure&nbsp;2: Sentence length
 </figure>
 </div>
 <p>These sentences are short and fairly uniform in length, so we won’t filter on it. Performance is not guaranteed for texts very different in length, tone or source from the training data.</p>
-<p><strong>Unwanted characters</strong>: unlike TF-IDF, transformer models are trained on punctuation and benefit from keeping it; strip only what carries no semantic value for your task (e.g.&nbsp;emojis, if your model doesn’t recognise them<a href="#fn7" class="footnote-ref" id="fnref7" role="doc-noteref"><sup>7</sup></a>). Here we just fix some punctuation irregularities:</p>
+<p><strong>Unwanted characters</strong>: unlike TF-IDF, transformer models are trained on punctuation and benefit from keeping it; strip only what carries no semantic value for your task (e.g.&nbsp;emojis, if your model doesn’t recognise them<a href="#fn7" class="footnote-ref" id="fnref7" role="doc-noteref"><sup>7</sup></a>). Here we just fix some punctuation irregularities. The function below returns a missing value for anything that is not a text, turns the double backquotes and double apostrophes of the original files into plain quotation marks, and removes the space left before punctuation marks (e.g.&nbsp;“word ,” becomes “word,”). We apply it to every sentence and store the result in a new column, so the original text stays available:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> preprocess_text(text: <span class="bu">str</span>):</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span>(<span class="bu">isinstance</span>(text, <span class="bu">str</span>)):</span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> pd.NA</span>
@@ -522,13 +562,13 @@ Figure&nbsp;2: Sentence length
 <span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>    )</span>
 <span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>df[<span class="st">"sentence-preprocessed"</span>] <span class="op">=</span> df[<span class="st">"sentence"</span>].<span class="bu">apply</span>(preprocess_text)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p><strong>Duplicates</strong>, which can bias training by over-weighting repeated examples:</p>
+<p><strong>Duplicates</strong>, which can bias training by over-weighting repeated examples. We count how many times each sentence appears, then how many sentences appear once, twice, and so on:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>df.groupby(<span class="st">"sentence"</span>).size().value_counts()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>1     2034</span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>2        8</span>
 <span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>50       5</span>
 <span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>Name: count, dtype: int64</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>5 sentences are duplicated 50 times each, all with <code>sent_id</code> starting in “s”:</p>
+<p>2034 sentences appear once, 8 appear twice, and 5 appear 50 times each. These last 5 all have a <code>sent_id</code> starting with “s”, so we keep only the rows whose <code>sent_id</code> does not (<code>~</code> negates the condition):</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>df_no_duplicates <span class="op">=</span> df.loc[<span class="op">~</span>df[<span class="st">"sent_id"</span>].<span class="bu">str</span>.startswith(<span class="st">"s"</span>), :]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>The remaining 8 duplicates are handled in the <a href="./appendices.html#sec-duplicates">appendices</a>; load the result directly:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>df_clean <span class="op">=</span> pd.read_csv(<span class="st">"./data/dataset-no-duplicates.csv"</span>)</span>
@@ -591,6 +631,7 @@ Figure&nbsp;2: Sentence length
 </table>
 <p>2035 rows remain.</p>
 <p><strong>Splitting the data</strong> into train (70%, the texts the model learns from), valid (15%, used to pick hyperparameters) and test (15%, reserved for a final, unbiased read of performance). The split is random, so we fix a <strong>seed</strong>: anyone running the code again gets the same split, and results close to the ones below (small differences remain from one machine to another).</p>
+<p>We convert the DataFrame into a Hugging Face <code>Dataset</code>, the format the fine-tuning tools expect, and split it twice: first 70% for train and 30% for the rest, then that rest in half for valid and test. A <code>DatasetDict</code> groups the three sets:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> datasets <span class="im">import</span> Dataset, DatasetDict</span>
 <span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>SEED <span class="op">=</span> <span class="dv">2306406</span></span>
@@ -627,9 +668,9 @@ Figure&nbsp;2: Sentence length
 </section>
 <section id="choose-and-load-a-model" class="level2">
 <h2 class="anchored" data-anchor-id="choose-and-load-a-model">Choose and load a model</h2>
-<p>We use the Transformers package, maintained by <a href="https://huggingface.co/">Hugging Face</a><a href="#fn8" class="footnote-ref" id="fnref8" role="doc-noteref"><sup>8</sup></a>, and start with <a href="https://huggingface.co/google-bert/bert-base-uncased">google-bert/bert-base-uncased</a>.</p>
+<p>With the data ready, the second step is to pick the pretrained encoder we will fine-tune. We use the Transformers package, maintained by <a href="https://huggingface.co/">Hugging Face</a><a href="#fn8" class="footnote-ref" id="fnref8" role="doc-noteref"><sup>8</sup></a>, and start with <a href="https://huggingface.co/google-bert/bert-base-uncased">google-bert/bert-base-uncased</a>.</p>
 <div class="callout callout-style-default callout-note callout-titled" title="How to choose a model">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-3-contents" aria-controls="callout-3" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-5-contents" aria-controls="callout-5" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -638,7 +679,7 @@ Figure&nbsp;2: Sentence length
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-3" class="callout-3-contents callout-collapse collapse">
+<div id="callout-5" class="callout-5-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <p>Model performance is sensitive to task and context: try several and compare. Criteria to weigh:</p>
 <ul>
@@ -652,6 +693,7 @@ Figure&nbsp;2: Sentence length
 </div>
 </div>
 <p>We load it with an AutoModel class<a href="#fn9" class="footnote-ref" id="fnref9" role="doc-noteref"><sup>9</sup></a>, here <a href="https://huggingface.co/docs/transformers/en/model_doc/auto#transformers.AutoModelForSequenceClassification"><code>AutoModelForSequenceClassification</code></a>:</p>
+<p>The model works with numbers rather than label names, so we first list the labels and build two dictionaries translating label names into ids and back. The number of labels sets the size of the classification layer (<a href="#sec-key-concepts" class="quarto-xref">Section&nbsp;2</a>), which is added on top of the pretrained encoder when the model is loaded:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> transformers <span class="im">import</span> AutoModelForSequenceClassification, set_seed</span>
 <span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>set_seed(SEED) <span class="co"># The classifier layer is initialised randomly: fix the seed here too</span></span>
@@ -682,7 +724,7 @@ Warning
 </div>
 </div>
 <div id="nte-model-description" class="callout callout-style-default callout-note callout-titled" title="Model description">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-5-contents" aria-controls="callout-5" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-7-contents" aria-controls="callout-7" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -691,7 +733,7 @@ Note&nbsp;1: Model description
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-5" class="callout-5-contents callout-collapse collapse">
+<div id="callout-7" class="callout-7-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <p>Inspect the architecture directly:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(model)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -761,7 +803,7 @@ Note&nbsp;1: Model description
 </div>
 </div>
 <div class="callout callout-style-default callout-note callout-titled" title="Tips and tricks: read the model configuration">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-6-contents" aria-controls="callout-6" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-8-contents" aria-controls="callout-8" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -770,7 +812,7 @@ Note&nbsp;1: Model description
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-6" class="callout-6-contents callout-collapse collapse">
+<div id="callout-8" class="callout-8-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <p><code>AutoConfig</code> surfaces details that model documentation sometimes omits:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> transformers <span class="im">import</span> AutoConfig</span>
@@ -813,7 +855,7 @@ Note&nbsp;1: Model description
 </section>
 <section id="fine-tune-the-model" class="level2">
 <h2 class="anchored" data-anchor-id="fine-tune-the-model">Fine-tune the model</h2>
-<p>Three steps remain: tokenize the dataset, set the training arguments, and launch training.</p>
+<p>We now have clean data and a pretrained model: the third step is fine-tuning itself. It takes three sub-steps: tokenize the dataset, set the training arguments, and launch training.</p>
 <section id="sec-tokenization" class="level3">
 <h3 class="anchored" data-anchor-id="sec-tokenization">Tokenize the dataset</h3>
 <p>Tokenizing happens in two steps: text is split into tokens from the model’s vocabulary, then each sequence is truncated or padded to a fixed length.</p>
@@ -822,7 +864,7 @@ Note&nbsp;1: Model description
 <span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>tokenizer <span class="op">=</span> AutoTokenizer.from_pretrained(MODEL_NAME)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="callout callout-style-default callout-tip callout-titled" title="Example">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-7-contents" aria-controls="callout-7" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-9-contents" aria-controls="callout-9" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -831,7 +873,7 @@ Note&nbsp;1: Model description
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-7" class="callout-7-contents callout-collapse collapse">
+<div id="callout-9" class="callout-9-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>tokenizer(<span class="st">"Hello World! 😇"</span>)</span>
 <span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a><span class="co"># {'input_ids': [101, 7592, ...], 'token_type_ids': [0, 0, ...], 'attention_mask': [1, 1, ...]}</span></span>
@@ -857,7 +899,7 @@ Note&nbsp;1: Model description
 </div>
 </div>
 </div>
-<p>Set the tokenizer’s parameters inside a preprocessing function and apply it:</p>
+<p>Set the tokenizer’s parameters inside a preprocessing function and apply it. For each row, the function tokenizes the cleaned sentence, truncating or padding it to 400 tokens (more than our longest sentence), and adds the label as its id in a <code>labels</code> column, the name the fine-tuning tools expect. <code>map</code> applies the function to every row of the three sets; we then keep only the columns the model needs, and convert them to PyTorch tensors, the format the model reads:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> preprocess_dataset(row: <span class="bu">dict</span>):</span>
 <span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  tokenized_entry <span class="op">=</span> tokenizer(</span>
 <span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>    row[<span class="st">"sentence-preprocessed"</span>],</span>
@@ -895,7 +937,7 @@ Note&nbsp;1: Model description
 </section>
 <section id="sec-training-parameters" class="level3">
 <h3 class="anchored" data-anchor-id="sec-training-parameters">Setup fine-tuning hyperparameters</h3>
-<p>Fine-tuning parameters live in the <code>TrainingArguments</code><a href="#fn11" class="footnote-ref" id="fnref11" role="doc-noteref"><sup>11</sup></a> object. Below are the main ones; the full list of <a href="https://huggingface.co/docs/transformers/v4.49.0/en/main_classes/trainer#transformers.TrainingArguments">117 parameters</a> is in the documentation. What each hyperparameter does, and how to tune it, is covered in <a href="#sec-hyperparameters-tuning" class="quarto-xref">Section&nbsp;4.1</a>.</p>
+<p>Fine-tuning parameters live in the <code>TrainingArguments</code><a href="#fn11" class="footnote-ref" id="fnref11" role="doc-noteref"><sup>11</sup></a> object. Below are the main ones; the full list of <a href="https://huggingface.co/docs/transformers/v4.49.0/en/main_classes/trainer#transformers.TrainingArguments">117 parameters</a> is in the documentation. What each hyperparameter does, and how to tune it, is covered in <a href="#sec-hyperparameters-tuning" class="quarto-xref">Section&nbsp;4.1</a>. The “Pipe” settings organise the run: every 5% of training (<code>0.05</code>), the model is evaluated on the valid set, the losses are logged and a checkpoint is saved; only 2 checkpoints are kept, the most recent one and the best one, which is reloaded at the end.</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> transformers <span class="im">import</span> TrainingArguments, Trainer</span>
 <span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>training_arguments <span class="op">=</span> TrainingArguments(</span>
 <span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Hyperparameters</span></span>
@@ -921,7 +963,7 @@ Note&nbsp;1: Model description
 </section>
 <section id="launch-fine-tuning" class="level3">
 <h3 class="anchored" data-anchor-id="launch-fine-tuning">Launch fine-tuning</h3>
-<p>Two more lines start the process:</p>
+<p>Two more lines start the process. The <code>Trainer</code> brings together the model, the training arguments and two of our sets: the train set, used to update the weights, and the valid set, used to compute the validation loss. <code>trainer.train()</code> then runs the fine-tuning:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb26"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>trainer <span class="op">=</span> Trainer(</span>
 <span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>    model <span class="op">=</span> model,</span>
 <span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>    args <span class="op">=</span> training_arguments,</span>
@@ -1066,8 +1108,9 @@ Note&nbsp;1: Model description
 </section>
 <section id="sec-evaluation" class="level2 page-columns page-full">
 <h2 class="anchored" data-anchor-id="sec-evaluation">Use model for inference and evaluate performance</h2>
-<p>Once you have a new fine-tuned model, you can use it on elements to predict the label. But we also need to verify that those predictions are correct.</p>
+<p>The model is fine-tuned, and the fourth step checks how good its predictions are before using it on new texts.</p>
 <p>To do so, we predict labels on the valid set (<a href="#sec-preprocess" class="quarto-xref">Section&nbsp;3.1</a>), then compare against the gold annotations using standard metrics: accuracy, precision, recall, F1. We use a dedicated valid set to be able to compare different versions of a model, and different models, on the same standard.</p>
+<p>The code below reloads the best checkpoint and switches the model to evaluation mode, which turns off the randomness used during training. It then goes through the valid set in batches of 8 texts, without computing what training would need (<code>torch.no_grad()</code>). For each text, the model’s scores are turned into probabilities (<code>softmax</code>), and the label with the highest probability is the prediction (<code>argmax</code>). Finally, the IDs, gold labels and predictions are gathered in a DataFrame:</p>
 <div class="columns page-columns page-full">
 <div class="column-body">
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
@@ -1140,7 +1183,7 @@ Note
 </section>
 <section id="sec-predict" class="level2">
 <h2 class="anchored" data-anchor-id="sec-predict">Predict labels for the full dataset</h2>
-<p>The same loop labels texts you haven’t annotated. Clean them with <code>preprocess_text</code> and tokenize them as in <a href="#sec-tokenization" class="quarto-xref">Section&nbsp;3.3.1</a> (without the <code>labels</code> line of <code>preprocess_dataset</code>, since they have no label), then keep the predictions:</p>
+<p>Last step of the pipeline: once the model is good enough, use it on the texts you haven’t annotated, which is why we fine-tuned it in the first place. The same loop labels them. Clean them with <code>preprocess_text</code> and tokenize them as in <a href="#sec-tokenization" class="quarto-xref">Section&nbsp;3.3.1</a> (without the <code>labels</code> line of <code>preprocess_dataset</code>, since they have no label), then keep the predictions:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="co"># In your project: your unannotated texts, preprocessed and tokenized like dsd</span></span>
 <span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>ds_corpus <span class="op">=</span> ...</span>
 <span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -1161,10 +1204,24 @@ Note
 <section id="sec-essentials-conclusion" class="level2">
 <h2 class="anchored" data-anchor-id="sec-essentials-conclusion">Conclusion</h2>
 <p>This section covered: knowing your corpus and preprocessing accordingly, choosing a model for the task, preparing data for fine-tuning, launching it, and evaluating with classification metrics. That’s enough to fine-tune most classification models with Hugging Face’s <code>AutoModelForSequenceClassification</code> pipeline, but <a href="#sec-evaluation" class="quarto-xref">Section&nbsp;3.4</a> showed mediocre performance. <a href="#sec-advanced" class="quarto-xref">Section&nbsp;4</a> tunes the hyperparameters to improve it and covers GPU/MPS, which this pipeline didn’t use.</p>
+<hr>
 </section>
 </section>
 <section id="sec-advanced" class="level1">
-<h1>Training pipeline: advanced practices</h1>
+<h1>Training pipeline: Tips for Advanced Users</h1>
+<div class="callout callout-style-default callout-note callout-titled" title="You have reached the end of the essentials">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>You have reached the end of the essentials
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>The pipeline above is enough to fine-tune a classifier. The following sections are optional: they show how to improve a model’s performance, speed up fine-tuning with a GPU, and read the errors you may run into.</p>
+</div>
+</div>
 <section id="sec-hyperparameters-tuning" class="level2">
 <h2 class="anchored" data-anchor-id="sec-hyperparameters-tuning">Diagnose and fix training problems</h2>
 <p>Checkpoints from <a href="#sec-essentials" class="quarto-xref">Section&nbsp;3</a> include the learning curve, which tracks the <strong>loss</strong> as fine-tuning progresses. The loss measures the gap between the model’s predictions and your annotations: the lower, the better. As a reference point, a model guessing at random between our 3 labels gets a loss of about 1.1, close to where our curves start.</p>
@@ -1361,7 +1418,7 @@ Figure&nbsp;3: Learning curve
 <h2 class="anchored" data-anchor-id="sec-errors">Read the errors</h2>
 <p>You will face many errors. Some are random: rerunning the script or restarting the kernel fixes them. Others are subtler: search the exact error message (genAI is often less reliable here than a forum post from someone who hit the same issue), and remember that a library version mismatch is a common root cause. The four below are the most common; treat this as a reference, not required reading.</p>
 <div class="callout callout-style-default callout-note callout-titled" title="Dataset formatting">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-10-contents" aria-controls="callout-10" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-13-contents" aria-controls="callout-13" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -1370,7 +1427,7 @@ Figure&nbsp;3: Learning curve
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-10" class="callout-10-contents callout-collapse collapse">
+<div id="callout-13" class="callout-13-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <p>Most formatting errors come from columns not matching what the code expects:</p>
 <ul>
@@ -1384,7 +1441,7 @@ Figure&nbsp;3: Learning curve
 </div>
 </div>
 <div class="callout callout-style-default callout-note callout-titled" title="Memory overflow">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-11-contents" aria-controls="callout-11" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-14-contents" aria-controls="callout-14" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -1393,7 +1450,7 @@ Figure&nbsp;3: Learning curve
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-11" class="callout-11-contents callout-collapse collapse">
+<div id="callout-14" class="callout-14-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <p>On GPU:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb38"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>NVML_SUCCESS == r INTERNAL ASSERT FAILED at "/home/conda/feedstock_root/build_artifacts/libtorch_1750199048837/work/c10/cuda/CUDACachingAllocator.cpp":1016, please report a bug to PyTorch.</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -1402,7 +1459,7 @@ Figure&nbsp;3: Learning curve
 </div>
 </div>
 <div class="callout callout-style-default callout-note callout-titled" title="Tensor shapes">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-12-contents" aria-controls="callout-12" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-15-contents" aria-controls="callout-15" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -1411,7 +1468,7 @@ Figure&nbsp;3: Learning curve
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-12" class="callout-12-contents callout-collapse collapse">
+<div id="callout-15" class="callout-15-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb39"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>ValueError: too many values to unpack (expected 2)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Usually a tokenization issue. <code>dsd["train"][0]["input_ids"].shape</code> should return <code>torch.Size([400])</code>, not <code>torch.Size([1, 400])</code>: make sure the tokenizer isn’t called with <code>return_tensors="pt"</code>, and that you use <code>dsd.with_format("torch")</code>.</p>
@@ -1419,7 +1476,7 @@ Figure&nbsp;3: Learning curve
 </div>
 </div>
 <div class="callout callout-style-default callout-note callout-titled" title="Missing keys when saving/reloading a checkpoint">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-13-contents" aria-controls="callout-13" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-16-contents" aria-controls="callout-16" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -1428,7 +1485,7 @@ Figure&nbsp;3: Learning curve
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-13" class="callout-13-contents callout-collapse collapse">
+<div id="callout-16" class="callout-16-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb40"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>There were missing keys in the checkpoint model loaded: ['bert.embeddings.LayerNorm.weight', ...</span>
 <span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>There were unexpected keys in the checkpoint model loaded: ['bert.embeddings.LayerNorm.beta', ...</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -1438,8 +1495,8 @@ Figure&nbsp;3: Learning curve
 </div>
 </section>
 </section>
-<section id="some-good-practices" class="level1">
-<h1>Some good practices</h1>
+<section id="good-practices" class="level1">
+<h1>Good Practices</h1>
 <section id="save-your-model-and-results" class="level2">
 <h2 class="anchored" data-anchor-id="save-your-model-and-results">Save your model and results</h2>
 <p>Push the fine-tuned model to the Hugging Face Hub for reproducibility and easy reuse:</p>
@@ -1455,26 +1512,14 @@ Figure&nbsp;3: Learning curve
 <li>The standard pipeline (<a href="#sec-essentials" class="quarto-xref">Section&nbsp;3</a>): data processing, model choice, fine-tuning, evaluation (summarised in <a href="#sec-essentials-conclusion" class="quarto-xref">Section&nbsp;3.6</a>).</li>
 <li>Advanced practice (<a href="#sec-advanced" class="quarto-xref">Section&nbsp;4</a>): reading the learning curve, tuning hyperparameters, using a GPU, and fixing common errors.</li>
 </ul>
-<div class="callout callout-style-default callout-tip callout-titled" title="A code-free alternative: ActiveTigger">
-<div class="callout-header d-flex align-content-center">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
-</div>
-<div class="callout-title-container flex-fill">
-<span class="screen-reader-only">Tip</span>A code-free alternative: ActiveTigger
-</div>
-</div>
-<div class="callout-body-container callout-body">
-<p>Everything in this tutorial can also be done without writing code, using <a href="https://css.cnrs.fr/active-tigger">ActiveTigger</a>, open-source software designed by and for social scientists for collaborative annotation and code-free fine-tuning.</p>
-</div>
-</div>
 </section>
 <section id="references" class="level1">
 <h1>References</h1>
 <p>Ashwin, J., Chhabra, A., &amp; Rao, V. (2025). Using Large Language Models for Qualitative Analysis can Introduce Serious Bias. <em>Sociological Methods &amp; Research</em>, 55(3), 795–839. https://doi.org/10.1177/00491241251338246</p>
-<p>Bonikowski, B., Luo, Y., &amp; Stuhler, O. (2022). Politics as Usual? Measuring Populism, Nationalism, and Authoritarianism in U.S. Presidential Campaigns (1952–2020) with Neural Language Models. <em>Sociological Methods &amp; Research</em>, 51(4), 1721–1787. https://doi.org/10.1177/00491241221122317</p>
 <p>Bucher, M. J. J., &amp; Martini, M. (2024). Fine-Tuned ‘Small’ LLMs (Still) Significantly Outperform Zero-Shot Generative AI Models in Text Classification. arXiv preprint arXiv:2406.08660.</p>
+<p>Clark, K., Luong, M.-T., Le, Q. V., &amp; Manning, C. D. (2020). ELECTRA: Pre-training Text Encoders as Discriminators Rather Than Generators. In <em>International Conference on Learning Representations (ICLR 2020)</em>. https://arxiv.org/abs/2003.10555</p>
 <p>Devlin, J., Chang, M.-W., Lee, K., &amp; Toutanova, K. (2019). BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding. In <em>Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, Volume 1</em> (pp.&nbsp;4171–4186).</p>
+<p>Do, S., Ollion, É., &amp; Shen, R. (2024). The Augmented Social Scientist: Using Sequential Transfer Learning to Annotate Millions of Texts with Human-Level Accuracy. <em>Sociological Methods &amp; Research</em>, 53(3), 1167–1200. https://doi.org/10.1177/00491241221134526</p>
 <p>Gilardi, F., Alizadeh, M., &amp; Kubli, M. (2023). ChatGPT Outperforms Crowd Workers for Text-Annotation Tasks. <em>Proceedings of the National Academy of Sciences</em>, 120(30), e2305016120. https://doi.org/10.1073/pnas.2305016120</p>
 <p>Krippendorff, K. (2018). <em>Content Analysis: An Introduction to Its Methodology</em> (4th ed.). SAGE Publications.</p>
 <p>Laurer, M., van Atteveldt, W., Casas, A., &amp; Welbers, K. (2024). Less Annotating, More Classifying: Addressing the Data Scarcity Issue of Supervised Machine Learning with Deep Transfer Learning and BERT-NLI. <em>Political Analysis</em>, 32(1), 84–100. https://doi.org/10.1017/pan.2023.20</p>
